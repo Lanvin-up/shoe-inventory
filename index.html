@@ -1,864 +1,873 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>鞋库管理系统 · GitHub Gist 云端同步</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>鞋库</title>
+<style>
+:root {
+  --bg: #f4f4f6;
+  --card: #ffffff;
+  --accent: #e63946;
+  --accent2: #457b9d;
+  --text: #1d1d1f;
+  --text2: #6e6e73;
+  --border: #e0e0e5;
+  --green: #2d6a4f;
+  --green-bg: #d8f3dc;
+  --yellow-bg: #fff3cd;
+  --yellow: #856404;
+  --red-bg: #fde8e8;
+  --radius: 14px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh;
+  padding-bottom: calc(70px + var(--safe-bottom));
+}
 
-        body {
-            background: #f4f7fc;
-            padding: 24px 20px;
-            color: #1e2a3e;
-        }
+/* TOP BAR */
+.topbar {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.topbar-title { font-size: 18px; font-weight: 700; letter-spacing: 0.04em; }
+.topbar-right { display: flex; gap: 8px; align-items: center; }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--bg); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; transition: background 0.15s;
+}
+.icon-btn:active { background: var(--border); }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+/* SYNC INDICATOR */
+.sync-pill {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; padding: 4px 10px; border-radius: 20px;
+  background: var(--bg); color: var(--text2);
+  transition: all 0.3s; white-space: nowrap;
+}
+.sync-pill.syncing { background: var(--yellow-bg); color: var(--yellow); }
+.sync-pill.ok      { background: var(--green-bg);  color: var(--green); }
+.sync-pill.err     { background: var(--red-bg);     color: var(--accent); }
+.sync-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+}
+.sync-pill.syncing .sync-dot { animation: blink 0.8s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-        /* 头部区域 */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            flex-wrap: wrap;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .title-area h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #1f3a5f, #2b4c7c);
-            background-clip: text;
-            -webkit-background-clip: text;
-            color: transparent;
-        }
-        .sub {
-            color: #5a6e8a;
-            font-size: 0.85rem;
-            border-left: 3px solid #3b82f6;
-            padding-left: 12px;
-            margin-top: 4px;
-        }
-        .cloud-settings-btn {
-            background: white;
-            border: 1px solid #cbd5e1;
-            border-radius: 60px;
-            padding: 8px 20px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: 0.2s;
-        }
-        .cloud-settings-btn:hover {
-            background: #eef2ff;
-            border-color: #3b82f6;
-        }
+/* BOTTOM NAV */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  display: flex; padding-bottom: var(--safe-bottom);
+}
+.nav-item {
+  flex: 1; padding: 10px 4px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer; border: none; background: none;
+  color: var(--text2); font-size: 10px; font-family: inherit; transition: color 0.15s;
+}
+.nav-item.active { color: var(--accent); }
+.nav-item .nav-icon { font-size: 22px; }
 
-        /* 统计卡片 */
-        .stats {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
-        }
-        .stat-card {
-            background: white;
-            border-radius: 24px;
-            padding: 12px 20px;
-            border: 1px solid #e2e8f0;
-            flex: 1;
-            min-width: 120px;
-        }
-        .stat-label {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: #5b6e8c;
-        }
-        .stat-number {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #0f2b3d;
-        }
+/* PAGES */
+.page { display: none; }
+.page.active { display: block; }
 
-        /* 工具栏 */
-        .toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 24px;
-            background: white;
-            padding: 8px 18px;
-            border-radius: 60px;
-            border: 1px solid #e9edf2;
-        }
-        .filter-group {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .filter-group input, .filter-group select {
-            padding: 8px 14px;
-            border-radius: 40px;
-            border: 1px solid #cfdfed;
-            background: #fafcff;
-            font-size: 0.8rem;
-        }
-        .btn-primary {
-            background: #1e3a5f;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 40px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .btn-secondary {
-            background: #f1f5f9;
-            border: 1px solid #cbd5e1;
-            padding: 8px 18px;
-            border-radius: 40px;
-            cursor: pointer;
-        }
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 16px 8px; }
+.stat-card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  position: relative; overflow: hidden;
+}
+.stat-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; }
+.stat-card:nth-child(1)::after { background: var(--accent); }
+.stat-card:nth-child(2)::after { background: var(--accent2); }
+.stat-card:nth-child(3)::after { background: var(--green); }
+.stat-card:nth-child(4)::after { background: #f4a261; }
+.stat-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; }
+.stat-val { font-size: 30px; font-weight: 700; line-height: 1; }
+.stat-val.warn { color: var(--accent); }
 
-        /* 表格 */
-        .table-wrapper {
-            background: white;
-            border-radius: 24px;
-            border: 1px solid #eef2f8;
-            overflow-x: auto;
-        }
-        .inventory-table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 700px;
-        }
-        .inventory-table th {
-            text-align: left;
-            padding: 14px 12px;
-            background: #fafdff;
-            font-weight: 600;
-            color: #2c4b74;
-            border-bottom: 2px solid #e9edf2;
-        }
-        .inventory-table td {
-            padding: 12px 12px;
-            border-bottom: 1px solid #f0f2f6;
-        }
-        .group-row td {
-            background-color: #f8fafc;
-            font-weight: 600;
-            color: #2d5a87;
-            border-top: 1px solid #e2e8f0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .qty-badge {
-            background: #eef2ff;
-            padding: 4px 12px;
-            border-radius: 40px;
-            font-weight: 700;
-        }
-        .action-btns {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-        .icon-btn {
-            background: transparent;
-            border: 1px solid #e2e8f0;
-            padding: 4px 10px;
-            border-radius: 30px;
-            font-size: 0.7rem;
-            cursor: pointer;
-        }
-        .icon-btn.edit { background: #eef2ff; color: #2563eb; }
-        .icon-btn.delete { background: #fff5f5; color: #dc2626; }
-        .icon-btn.qty-btn { background: #f8fafc; font-weight: 700; }
+/* SEARCH */
+.search-wrap { padding: 12px 16px 8px; position: relative; }
+.search-input {
+  width: 100%; padding: 11px 16px 11px 40px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  background: var(--card); font-size: 15px; font-family: inherit;
+  color: var(--text); outline: none; transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--accent2); }
+.search-icon { position:absolute; left:28px; top:50%; transform:translateY(-50%); font-size:16px; color:var(--text2); pointer-events:none; }
 
-        /* 表单卡片 */
-        .form-card {
-            background: white;
-            border-radius: 24px;
-            padding: 18px 22px;
-            margin-top: 28px;
-            border: 1px solid #eef2f8;
-        }
-        .form-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            align-items: flex-end;
-        }
-        .input-group {
-            flex: 1;
-            min-width: 130px;
-        }
-        .input-group label {
-            font-size: 0.7rem;
-            font-weight: 600;
-            display: block;
-            margin-bottom: 4px;
-        }
-        .input-group input {
-            width: 100%;
-            padding: 8px 12px;
-            border-radius: 20px;
-            border: 1.5px solid #e2e8f0;
-        }
-        .form-actions {
-            display: flex;
-            gap: 12px;
-        }
-        .message {
-            margin-top: 12px;
-            padding: 6px 14px;
-            border-radius: 40px;
-            font-size: 0.75rem;
-            display: inline-block;
-        }
+/* PILLS */
+.pills { display:flex; gap:8px; padding:4px 16px 12px; overflow-x:auto; scrollbar-width:none; }
+.pills::-webkit-scrollbar { display:none; }
+.pill {
+  flex-shrink:0; padding:6px 14px; border-radius:20px;
+  background:var(--card); border:1.5px solid var(--border);
+  font-size:13px; color:var(--text2); cursor:pointer;
+  transition:all 0.15s; white-space:nowrap; font-family:inherit;
+}
+.pill.active { background:var(--accent); border-color:var(--accent); color:#fff; }
 
-        /* 模态框 */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            border-radius: 32px;
-            width: 90%;
-            max-width: 520px;
-            max-height: 85vh;
-            overflow-y: auto;
-            padding: 24px 28px;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            font-size: 1.3rem;
-            font-weight: 700;
-        }
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 1.8rem;
-            cursor: pointer;
-            line-height: 1;
-        }
-        .sync-field {
-            margin-bottom: 18px;
-        }
-        .sync-field label {
-            font-weight: 600;
-            font-size: 0.75rem;
-            display: block;
-            margin-bottom: 5px;
-        }
-        .sync-field input {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 20px;
-            border: 1px solid #cbd5e1;
-            font-size: 0.8rem;
-        }
-        .sync-buttons {
-            display: flex;
-            gap: 12px;
-            margin: 20px 0 12px;
-        }
-        .btn-sync {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-weight: 600;
-            cursor: pointer;
-            flex: 1;
-        }
-        .btn-sync-outline {
-            background: white;
-            border: 1px solid #3b82f6;
-            color: #3b82f6;
-        }
-        .help-text {
-            font-size: 0.7rem;
-            color: #5b6e8c;
-            margin-top: 20px;
-            border-top: 1px solid #edf2f7;
-            padding-top: 16px;
-        }
-        .help-text details {
-            margin-top: 8px;
-        }
-        .help-text summary {
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .status-msg {
-            font-size: 0.7rem;
-            margin-top: 12px;
-            padding: 8px;
-            border-radius: 16px;
-            background: #f1f5f9;
-        }
-        footer {
-            margin-top: 32px;
-            text-align: center;
-            font-size: 0.7rem;
-            color: #7c8ea0;
-        }
-    </style>
+/* LIST */
+.list-section { padding: 0 16px; }
+.section-label { font-size:12px; color:var(--text2); font-weight:600; letter-spacing:0.08em; text-transform:uppercase; padding:8px 0 6px; }
+.inv-card {
+  background: var(--card); border-radius: var(--radius);
+  margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden;
+  transition: opacity 0.3s;
+}
+.inv-card.saving { opacity: 0.6; }
+.inv-card-main { padding:14px 16px; display:flex; align-items:flex-start; gap:12px; }
+.inv-code-block { flex:1; min-width:0; }
+.inv-code { font-size:15px; font-weight:700; color:var(--accent); letter-spacing:0.03em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.inv-meta { font-size:13px; color:var(--text2); margin-top:3px; }
+.inv-meta span { margin-right:8px; }
+.color-dot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:3px; border:1px solid rgba(0,0,0,0.1); vertical-align:middle; }
+.qty-block { text-align:right; flex-shrink:0; }
+.qty-num { font-size:26px; font-weight:700; line-height:1; min-width:40px; text-align:center; display:inline-block; }
+.qty-num.high { color:var(--green); }
+.qty-num.mid  { color:var(--yellow); }
+.qty-num.low  { color:var(--accent); }
+.qty-num.zero { color:#bbb; }
+.qty-label { font-size:11px; color:var(--text2); text-align:center; }
+.qty-controls { display:flex; border-top:1px solid var(--border); }
+.qty-btn { flex:1; padding:12px; border:none; background:none; font-size:22px; color:var(--text2); cursor:pointer; font-family:inherit; transition:background 0.1s; }
+.qty-btn:active { background:var(--bg); }
+.qty-display { flex:2; text-align:center; font-size:18px; font-weight:700; border-left:1px solid var(--border); border-right:1px solid var(--border); padding:9px; display:flex; align-items:center; justify-content:center; }
+.inv-card-footer { display:flex; border-top:1px solid var(--border); }
+.inv-action { flex:1; padding:11px; border:none; background:none; font-size:13px; color:var(--text2); cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:4px; transition:background 0.1s; }
+.inv-action:active { background:var(--bg); }
+.inv-action+.inv-action { border-left:1px solid var(--border); }
+.inv-action.del { color:var(--accent); }
+
+/* FORM */
+.form-page { padding:16px; }
+.form-title { font-size:18px; font-weight:700; margin-bottom:16px; }
+.field { margin-bottom:14px; }
+.field label { display:block; font-size:12px; color:var(--text2); font-weight:600; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px; }
+.field input, .field select { width:100%; padding:13px 14px; border:1.5px solid var(--border); border-radius:12px; font-size:16px; font-family:inherit; color:var(--text); background:var(--card); outline:none; transition:border-color 0.2s; appearance:none; }
+.field input:focus, .field select:focus { border-color:var(--accent2); }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.submit-btn { width:100%; padding:16px; border:none; border-radius:14px; background:var(--accent); color:white; font-size:17px; font-weight:700; font-family:inherit; cursor:pointer; margin-top:4px; transition:opacity 0.15s; letter-spacing:0.05em; }
+.submit-btn:active { opacity:0.85; }
+
+/* SETTINGS */
+.settings-page { padding:16px; }
+.settings-section { background:var(--card); border-radius:var(--radius); overflow:hidden; margin-bottom:16px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+.settings-title { font-size:13px; color:var(--text2); font-weight:600; letter-spacing:0.08em; text-transform:uppercase; padding:14px 16px 10px; }
+.settings-row { padding:13px 16px; border-top:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+.settings-row label { font-size:14px; font-weight:500; flex-shrink:0; min-width:72px; }
+.settings-row input { flex:1; padding:9px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; color:var(--text); background:var(--bg); outline:none; min-width:0; transition:border-color 0.2s; }
+.settings-row input:focus { border-color:var(--accent2); }
+.toggle-row { padding:13px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.toggle-row label { font-size:14px; font-weight:500; }
+.toggle-row small { font-size:12px; color:var(--text2); margin-top:2px; display:block; }
+.toggle {
+  position:relative; width:48px; height:28px; flex-shrink:0;
+}
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-slider {
+  position:absolute; inset:0; background:#ccc; border-radius:28px; cursor:pointer; transition:0.3s;
+}
+.toggle-slider::before {
+  content:''; position:absolute; width:22px; height:22px; border-radius:50%;
+  background:white; top:3px; left:3px; transition:0.3s;
+  box-shadow:0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle input:checked + .toggle-slider { background:var(--green); }
+.toggle input:checked + .toggle-slider::before { transform:translateX(20px); }
+
+.action-btn { width:100%; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; transition:opacity 0.15s; letter-spacing:0.03em; margin-bottom:10px; }
+.action-btn:active { opacity:0.8; }
+.action-btn.primary { background:var(--text); color:#fff; }
+.action-btn.success { background:var(--green); color:#fff; }
+.action-btn.danger  { background:var(--accent); color:#fff; }
+.action-btn.plain   { background:var(--card); color:var(--text); border:1.5px solid var(--border); }
+
+/* AUTO SYNC STATUS BOX */
+.sync-log {
+  background: var(--card); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  font-size: 13px; color: var(--text2); line-height: 1.8;
+}
+.sync-log-title { font-weight: 600; color: var(--text); margin-bottom: 6px; font-size: 13px; }
+#lastSyncTime { color: var(--green); font-weight: 500; }
+
+/* SHEET */
+.sheet-overlay { position:fixed; inset:0; z-index:300; background:rgba(0,0,0,0.4); display:none; align-items:flex-end; }
+.sheet-overlay.open { display:flex; }
+.sheet { background:var(--card); border-radius:20px 20px 0 0; width:100%; padding:20px 20px calc(20px + var(--safe-bottom)); max-height:90vh; overflow-y:auto; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.32,0.72,0,1); }
+.sheet-overlay.open .sheet { transform:translateY(0); }
+.sheet-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 16px; }
+.sheet-title { font-size:17px; font-weight:700; margin-bottom:16px; }
+
+/* TOAST */
+#toast { position:fixed; bottom:calc(80px + var(--safe-bottom)); left:50%; transform:translateX(-50%) translateY(20px); background:rgba(29,29,31,0.9); color:#fff; padding:10px 20px; border-radius:20px; font-size:14px; z-index:9999; opacity:0; transition:all 0.25s; pointer-events:none; white-space:nowrap; }
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+#toast.ok  { background:rgba(45,106,79,0.95); }
+#toast.err { background:rgba(230,57,70,0.95); }
+
+/* EMPTY */
+.empty { text-align:center; padding:60px 20px; color:var(--text2); }
+.empty .e-icon { font-size:56px; margin-bottom:12px; opacity:0.35; }
+.empty p { font-size:15px; }
+
+/* INIT OVERLAY */
+#initOverlay {
+  position:fixed; inset:0; z-index:500;
+  background:rgba(255,255,255,0.96);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:16px;
+  backdrop-filter:blur(8px);
+}
+#initOverlay .init-icon { font-size:52px; }
+#initOverlay p { font-size:16px; color:var(--text2); }
+#initOverlay .spinner {
+  width:32px; height:32px; border:3px solid var(--border);
+  border-top-color:var(--accent); border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* CONFIG NOTICE */
+.notice {
+  margin:16px; padding:14px 16px;
+  background:var(--yellow-bg); border-radius:var(--radius);
+  font-size:13px; color:var(--yellow); line-height:1.7;
+  border:1px solid #fde68a;
+}
+.notice strong { display:block; margin-bottom:4px; }
+
+@media(min-width:540px) {
+  body { max-width:480px; margin:0 auto; }
+  .bottom-nav { max-width:480px; left:50%; transform:translateX(-50%); right:auto; width:480px; }
+}
+</style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <div class="title-area">
-            <h1>👟 鞋库管理系统</h1>
-            <div class="sub">货号归类 · 本地存储 + GitHub Gist 云端同步</div>
-        </div>
-        <button id="openSettingsBtn" class="cloud-settings-btn">☁️ 云端设置</button>
-    </div>
 
-    <div class="stats">
-        <div class="stat-card"><div class="stat-label">📦 总SKU数</div><div class="stat-number" id="totalSku">0</div></div>
-        <div class="stat-card"><div class="stat-label">👟 总库存量</div><div class="stat-number" id="totalQty">0</div></div>
-        <div class="stat-card"><div class="stat-label">🏷️ 款式数</div><div class="stat-number" id="totalStyles">0</div></div>
-    </div>
-
-    <div class="toolbar">
-        <div class="filter-group">
-            <select id="styleFilterSelect"><option value="">全部货号</option></select>
-            <input type="text" id="searchInput" placeholder="颜色/尺码/货号关键词">
-            <button id="clearFilterBtn" class="btn-secondary">✖ 清除</button>
-        </div>
-        <button id="addNewBtn" class="btn-primary">+ 新增鞋子</button>
-    </div>
-
-    <div class="table-wrapper">
-        <table class="inventory-table">
-            <thead><tr><th>货号</th><th>颜色</th><th>尺码</th><th>数量</th><th>操作</th></tr></thead>
-            <tbody id="tableBody"><tr><td colspan="5">加载中...</td></tr></tbody>
-        </table>
-    </div>
-
-    <div class="form-card" id="formCard">
-        <div style="font-weight:600; margin-bottom:12px;"><span id="formModeText">添加新鞋子</span></div>
-        <div class="form-grid">
-            <div class="input-group"><label>货号 *</label><input type="text" id="articleNo" placeholder="例: AQ2567"></div>
-            <div class="input-group"><label>颜色 *</label><input type="text" id="color" placeholder="白/黑/红"></div>
-            <div class="input-group"><label>尺码 *</label><input type="text" id="size" placeholder="42"></div>
-            <div class="input-group"><label>数量</label><input type="number" id="quantity" min="0" value="0"></div>
-            <div class="form-actions"><button id="saveBtn" class="btn-primary">💾 保存</button><button id="cancelBtn" class="btn-secondary">取消</button></div>
-        </div>
-        <div id="formMessage" class="message" style="display:none;"></div>
-    </div>
-    <footer>数据自动保存至浏览器 | 点击「云端设置」配置 GitHub Gist 实现免费备份与恢复</footer>
+<!-- 初始化加载遮罩 -->
+<div id="initOverlay">
+  <div class="init-icon">👟</div>
+  <div class="spinner"></div>
+  <p id="initMsg">正在加载数据…</p>
 </div>
 
-<!-- 云端设置模态框 -->
-<div id="syncModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header"><span>☁️ GitHub Gist 同步</span><button class="close-modal">&times;</button></div>
-        <div class="sync-field"><label>GitHub Personal Access Token</label><input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx"></div>
-        <div class="sync-field"><label>Gist ID</label><input type="text" id="gistId" placeholder="例如: 1a2b3c4d5e6f7g8h9i0j"></div>
-        <div class="sync-field"><label>云端文件名 (固定)</label><input type="text" id="gistFilename" value="shoe_inventory_backup.json" readonly style="background:#f1f5f9;"></div>
-        <div class="sync-buttons">
-            <button id="backupToGistBtn" class="btn-sync">⬆️ 备份到云端</button>
-            <button id="restoreFromGistBtn" class="btn-sync btn-sync-outline">⬇️ 从云端恢复</button>
-        </div>
-        <div id="syncStatus" class="status-msg">💡 配置后即可免费备份/恢复库存数据</div>
-        <div class="help-text">
-            <details>
-                <summary>📖 GitHub Gist 免费使用说明</summary>
-                <div style="margin-top:8px;">
-                    1. 登录 GitHub，访问 <a href="https://gist.github.com" target="_blank">gist.github.com</a> 新建一个私密代码片段（内容可留空）。<br>
-                    2. 复制浏览器地址栏中的 Gist ID（例如 https://gist.github.com/你的用户名/1a2b3c4d5e6f → ID 为 "1a2b3c4d5e6f"）。<br>
-                    3. 前往 <a href="https://github.com/settings/tokens/new" target="_blank">GitHub Token 设置页</a>，勾选 <strong>gist</strong> 权限，生成 Token 并复制保存。<br>
-                    4. 将 Token 和 Gist ID 填入上方，点击「备份到云端」上传当前库存。<br>
-                    5. 「从云端恢复」将拉取最新备份并覆盖本地数据。<br>
-                    ✅ 免费且无流量限制，个人使用完全足够。<br>
-                    ⚠️ Token 仅保存在浏览器本地，请勿泄露。
-                </div>
-            </details>
-        </div>
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-title">👟 鞋库</div>
+  <div class="topbar-right">
+    <div class="sync-pill" id="syncPill">
+      <span class="sync-dot"></span>
+      <span id="syncText">未配置</span>
     </div>
+    <button class="icon-btn" onclick="showPage('add')" title="添加">＋</button>
+  </div>
 </div>
+
+<!-- 库存页 -->
+<div class="page active" id="page-stock">
+  <div id="noConfigNotice" class="notice" style="display:none">
+    <strong>⚠ 尚未配置 Gitee 自动同步</strong>
+    数据仅保存在本机，请前往「设置」填写 Gitee 信息以开启云同步。
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="searchInput" placeholder="搜货号、品牌、颜色…" oninput="renderList()">
+  </div>
+  <div class="pills">
+    <button class="pill active" onclick="setFilter('all',this)">全部</button>
+    <button class="pill" onclick="setFilter('low',this)">⚠ 低库存</button>
+    <button class="pill" onclick="setFilter('zero',this)">缺货</button>
+  </div>
+  <div class="list-section">
+    <div id="invList"></div>
+    <div class="empty" id="emptyState" style="display:none">
+      <div class="e-icon">📦</div>
+      <p>暂无库存，点右上角 ＋ 录入</p>
+    </div>
+  </div>
+</div>
+
+<!-- 统计页 -->
+<div class="page" id="page-stats">
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">款式数</div><div class="stat-val" id="s1">0</div></div>
+    <div class="stat-card"><div class="stat-label">SKU 总数</div><div class="stat-val" id="s2">0</div></div>
+    <div class="stat-card"><div class="stat-label">库存总量</div><div class="stat-val" id="s3">0</div></div>
+    <div class="stat-card"><div class="stat-label">低库存预警</div><div class="stat-val warn" id="s4">0</div></div>
+  </div>
+  <div class="list-section">
+    <div class="section-label">按款式汇总</div>
+    <div id="summaryList"></div>
+  </div>
+</div>
+
+<!-- 录入页 -->
+<div class="page" id="page-add">
+  <div class="form-page">
+    <div class="form-title">录入库存</div>
+    <div class="field">
+      <label>货号 / 款式编码 *</label>
+      <input type="text" id="fCode" placeholder="例：NK-AIR-001" autocapitalize="characters">
+    </div>
+    <div class="field-row">
+      <div class="field"><label>品牌</label><input type="text" id="fBrand" placeholder="Nike"></div>
+      <div class="field"><label>颜色 *</label><input type="text" id="fColor" placeholder="黑白"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>尺码 *</label>
+        <select id="fSize">
+          <option value="">选择</option>
+          <option>35</option><option>35.5</option><option>36</option><option>36.5</option>
+          <option>37</option><option>37.5</option><option>38</option><option>38.5</option>
+          <option>39</option><option>39.5</option><option>40</option><option>40.5</option>
+          <option>41</option><option>41.5</option><option>42</option><option>42.5</option>
+          <option>43</option><option>43.5</option><option>44</option><option>44.5</option>
+          <option>45</option><option>46</option><option>47</option>
+        </select>
+      </div>
+      <div class="field"><label>数量 *</label><input type="number" id="fQty" placeholder="0" min="0" inputmode="numeric"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>进价（元）</label><input type="number" id="fCost" placeholder="0.00" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label>备注</label><input type="text" id="fNote" placeholder="选填"></div>
+    </div>
+    <button class="submit-btn" onclick="addItem()">✓ 确认添加</button>
+  </div>
+</div>
+
+<!-- 设置页 -->
+<div class="page" id="page-settings">
+  <div class="settings-page">
+
+    <!-- 自动同步状态 -->
+    <div class="sync-log">
+      <div class="sync-log-title">☁️ 云同步状态</div>
+      <div>上次同步：<span id="lastSyncTime">—</span></div>
+      <div>同步次数：<span id="syncCount">0</span> 次</div>
+      <div id="syncErrMsg" style="color:var(--accent);display:none"></div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">🔗 Gitee 配置</div>
+      <div class="settings-row"><label>用户名</label><input id="gOwner" placeholder="your-username" type="text" autocapitalize="none" autocorrect="off"></div>
+      <div class="settings-row"><label>仓库名</label><input id="gRepo"  placeholder="shoe-inventory" type="text" autocapitalize="none" autocorrect="off"></div>
+      <div class="settings-row"><label>文件名</label><input id="gPath"  placeholder="data.json" type="text" autocapitalize="none"></div>
+      <div class="settings-row"><label>Token</label><input id="gToken"  placeholder="私人令牌" type="password"></div>
+      <div class="toggle-row">
+        <div>
+          <label>自动同步</label>
+          <small>每次数据变动后 1 秒自动上传</small>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="autoSyncToggle" checked onchange="saveGiteeConfig()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <label>启动时拉取</label>
+          <small>打开页面时自动从 Gitee 获取最新数据</small>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="pullOnStartToggle" checked onchange="saveGiteeConfig()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <button class="action-btn primary" onclick="saveGiteeConfig(true)">💾 保存配置</button>
+    <button class="action-btn success" onclick="manualSync()">↑ 立即同步到 Gitee</button>
+    <button class="action-btn plain"   onclick="manualPull()">↓ 立即从 Gitee 拉取</button>
+    <button class="action-btn plain"   onclick="exportCSV()">📄 导出 CSV</button>
+    <button class="action-btn danger"  onclick="clearAll()">🗑 清空所有数据</button>
+
+    <p style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:4px">
+      💡 Token：登录 Gitee → 设置 → 私人令牌 → 生成（勾选 projects 权限）<br>
+      ⚠ 仓库名只填名称，不要带用户名前缀
+    </p>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-stock"    onclick="showPage('stock')">   <span class="nav-icon">📦</span>库存</button>
+  <button class="nav-item"        id="nav-stats"    onclick="showPage('stats')">   <span class="nav-icon">📊</span>统计</button>
+  <button class="nav-item"        id="nav-add"      onclick="showPage('add')">     <span class="nav-icon">➕</span>录入</button>
+  <button class="nav-item"        id="nav-settings" onclick="showPage('settings')"><span class="nav-icon">⚙️</span>设置</button>
+</nav>
+
+<!-- 编辑底部弹窗 -->
+<div class="sheet-overlay" id="editSheet" onclick="closeSheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">编辑记录</div>
+    <input type="hidden" id="editId">
+    <div class="field"><label>货号</label><input id="eCode" type="text" autocapitalize="characters"></div>
+    <div class="field-row">
+      <div class="field"><label>品牌</label><input id="eBrand" type="text"></div>
+      <div class="field"><label>颜色</label><input id="eColor" type="text"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>尺码</label>
+        <select id="eSize">
+          <option>35</option><option>35.5</option><option>36</option><option>36.5</option>
+          <option>37</option><option>37.5</option><option>38</option><option>38.5</option>
+          <option>39</option><option>39.5</option><option>40</option><option>40.5</option>
+          <option>41</option><option>41.5</option><option>42</option><option>42.5</option>
+          <option>43</option><option>43.5</option><option>44</option><option>44.5</option>
+          <option>45</option><option>46</option><option>47</option>
+        </select>
+      </div>
+      <div class="field"><label>数量</label><input id="eQty" type="number" min="0" inputmode="numeric"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>进价</label><input id="eCost" type="number" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label>备注</label><input id="eNote" type="text"></div>
+    </div>
+    <button class="submit-btn" onclick="saveEdit()">保存修改</button>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
-    // ---------- 存储 KEY ----------
-    const STORAGE_KEY = "shoe_inventory_flat_group";
-    const GIST_CONFIG_KEY = "gist_sync_config";
+// ══════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════
+let inv = [];
+let filterMode = 'all';
+let giteeConfig = { owner:'', repo:'', path:'data.json', token:'', autoSync:true, pullOnStart:true };
+let syncCount = 0;
+let isSyncing = false;
+let autoSyncTimer = null;
+let fileSHA = ''; // Gitee file SHA cache
 
-    // 全局库存数据
-    let inventory = [];
-    let editId = null;
-    let styleFilter = "";
-    let keywordFilter = "";
+const CM = {'黑':'#1a1a1a','白':'#f5f5f5','红':'#e74c3c','蓝':'#3498db','绿':'#2ecc71','黄':'#f1c40f','橙':'#e67e22','粉':'#ff69b4','灰':'#95a5a6','棕':'#8B4513','米':'#f5deb3','紫':'#9b59b6'};
+const swColor = s => { for(const [k,v] of Object.entries(CM)) if(s&&s.includes(k)) return v; return '#ccc'; };
+const qcls   = n => n===0?'zero':n<=3?'low':n<=10?'mid':'high';
+const esc     = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const isConfigured = () => giteeConfig.owner && giteeConfig.repo && giteeConfig.token;
 
-    // DOM 元素
-    const tableBody = document.getElementById("tableBody");
-    const totalSkuSpan = document.getElementById("totalSku");
-    const totalQtySpan = document.getElementById("totalQty");
-    const totalStylesSpan = document.getElementById("totalStyles");
-    const styleFilterSelect = document.getElementById("styleFilterSelect");
-    const searchInput = document.getElementById("searchInput");
-    const clearFilterBtn = document.getElementById("clearFilterBtn");
-    const addNewBtn = document.getElementById("addNewBtn");
-    const saveBtn = document.getElementById("saveBtn");
-    const cancelBtn = document.getElementById("cancelBtn");
-    const articleNoInput = document.getElementById("articleNo");
-    const colorInput = document.getElementById("color");
-    const sizeInput = document.getElementById("size");
-    const quantityInput = document.getElementById("quantity");
-    const formModeText = document.getElementById("formModeText");
-    const formMessageDiv = document.getElementById("formMessage");
+// ══════════════════════════════════════
+//  LOCAL STORAGE
+// ══════════════════════════════════════
+function saveLocal() {
+  localStorage.setItem('shoeInv4', JSON.stringify(inv));
+  updateStats();
+}
+function loadLocal() {
+  try { const r=localStorage.getItem('shoeInv4'); if(r) inv=JSON.parse(r); } catch(e){}
+}
+function loadGiteeConfig() {
+  try {
+    const r=localStorage.getItem('giteeConf3');
+    if(r) Object.assign(giteeConfig, JSON.parse(r));
+    document.getElementById('gOwner').value = giteeConfig.owner||'';
+    document.getElementById('gRepo').value  = giteeConfig.repo||'';
+    document.getElementById('gPath').value  = giteeConfig.path||'data.json';
+    document.getElementById('gToken').value = giteeConfig.token||'';
+    document.getElementById('autoSyncToggle').checked   = giteeConfig.autoSync !== false;
+    document.getElementById('pullOnStartToggle').checked = giteeConfig.pullOnStart !== false;
+    const c=parseInt(localStorage.getItem('syncCount')||'0');
+    syncCount=c; document.getElementById('syncCount').textContent=c;
+    const lt=localStorage.getItem('lastSyncTime');
+    if(lt) document.getElementById('lastSyncTime').textContent=lt;
+  } catch(e){}
+}
+function saveGiteeConfig(showToast=false) {
+  giteeConfig = {
+    owner: document.getElementById('gOwner').value.trim(),
+    repo:  document.getElementById('gRepo').value.trim(),
+    path:  document.getElementById('gPath').value.trim()||'data.json',
+    token: document.getElementById('gToken').value.trim(),
+    autoSync:    document.getElementById('autoSyncToggle').checked,
+    pullOnStart: document.getElementById('pullOnStartToggle').checked,
+  };
+  localStorage.setItem('giteeConf3', JSON.stringify(giteeConfig));
+  fileSHA = ''; // reset SHA cache when config changes
+  updateNoConfigNotice();
+  if(showToast) toast('配置已保存 ✓','ok');
+}
 
-    // 模态框相关
-    const modal = document.getElementById("syncModal");
-    const openSettingsBtn = document.getElementById("openSettingsBtn");
-    const closeModalBtn = document.querySelector(".close-modal");
-    const githubTokenInput = document.getElementById("githubToken");
-    const gistIdInput = document.getElementById("gistId");
-    const gistFilenameSpan = document.getElementById("gistFilename");
-    const backupBtn = document.getElementById("backupToGistBtn");
-    const restoreBtn = document.getElementById("restoreFromGistBtn");
-    const syncStatusDiv = document.getElementById("syncStatus");
+// ══════════════════════════════════════
+//  SYNC INDICATOR
+// ══════════════════════════════════════
+function setSyncUI(state, text) {
+  const pill = document.getElementById('syncPill');
+  pill.className = 'sync-pill ' + (state||'');
+  document.getElementById('syncText').textContent = text;
+}
 
-    // ========== 辅助函数 ==========
-    function showMessage(text, isError = false, targetDiv = formMessageDiv) {
-        targetDiv.style.display = "block";
-        targetDiv.textContent = text;
-        targetDiv.style.backgroundColor = isError ? "#fee2e2" : "#e0f2fe";
-        targetDiv.style.color = isError ? "#b91c1c" : "#0c4a6e";
-        setTimeout(() => {
-            if(targetDiv) targetDiv.style.display = "none";
-        }, 2800);
+// ══════════════════════════════════════
+//  GITEE API
+// ══════════════════════════════════════
+async function fetchSHA() {
+  // Get current file SHA (needed for PUT updates)
+  try {
+    const {owner,repo,path,token} = giteeConfig;
+    const res = await fetch(`https://gitee.com/api/v5/repos/${owner}/${repo}/contents/${path}?access_token=${token}`);
+    if(res.ok) { const d=await res.json(); fileSHA=d.sha||''; }
+    else fileSHA='';
+  } catch(e) { fileSHA=''; }
+}
+
+async function pushToGitee() {
+  if(isSyncing || !isConfigured()) return;
+  isSyncing = true;
+  setSyncUI('syncing','同步中…');
+  try {
+    const {owner,repo,path,token} = giteeConfig;
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(inv, null, 2))));
+    // Fetch SHA if not cached
+    if(!fileSHA) await fetchSHA();
+    const body = {
+      message: `自动同步 ${new Date().toLocaleString('zh-CN')}`,
+      content, access_token: token
+    };
+    if(fileSHA) body.sha = fileSHA;
+    const res = await fetch(`https://gitee.com/api/v5/repos/${owner}/${repo}/contents/${path}`, {
+      method: fileSHA ? 'PUT' : 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if(res.ok) {
+      const d = await res.json();
+      fileSHA = d.content?.sha || fileSHA; // update SHA
+      syncCount++;
+      const t = new Date().toLocaleString('zh-CN');
+      localStorage.setItem('syncCount', syncCount);
+      localStorage.setItem('lastSyncTime', t);
+      document.getElementById('syncCount').textContent = syncCount;
+      document.getElementById('lastSyncTime').textContent = t;
+      document.getElementById('syncErrMsg').style.display='none';
+      setSyncUI('ok','已同步');
+      setTimeout(()=>{ if(!isSyncing) setSyncUI('ok','已同步'); }, 100);
+    } else {
+      const e = await res.json().catch(()=>({}));
+      // If SHA conflict, reset and retry once
+      if(res.status===409||res.status===422) {
+        fileSHA='';
+        isSyncing=false;
+        await pushToGitee();
+        return;
+      }
+      throw new Error(e.message||'HTTP '+res.status);
     }
+  } catch(e) {
+    setSyncUI('err','同步失败');
+    document.getElementById('syncErrMsg').style.display='block';
+    document.getElementById('syncErrMsg').textContent='⚠ 上次同步失败：'+e.message;
+  } finally {
+    isSyncing = false;
+  }
+}
 
-    function showSyncStatus(msg, isError = false) {
-        syncStatusDiv.innerHTML = msg;
-        syncStatusDiv.style.backgroundColor = isError ? "#fee2e2" : "#e6f7e6";
-        syncStatusDiv.style.color = isError ? "#b91c1c" : "#166534";
-        setTimeout(() => {
-            if(syncStatusDiv) syncStatusDiv.style.backgroundColor = "#f1f5f9";
-        }, 4000);
+async function pullFromGitee() {
+  if(!isConfigured()) return false;
+  setSyncUI('syncing','拉取中…');
+  try {
+    const {owner,repo,path,token} = giteeConfig;
+    const res = await fetch(`https://gitee.com/api/v5/repos/${owner}/${repo}/contents/${path}?access_token=${token}&timestamp=${Date.now()}`);
+    if(!res.ok) {
+      if(res.status===404) { setSyncUI('','未配置'); return false; }
+      throw new Error('HTTP '+res.status);
     }
-
-    function saveToLocal() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
+    const data = await res.json();
+    fileSHA = data.sha || '';
+    const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+    const remote = JSON.parse(decoded);
+    if(Array.isArray(remote)) {
+      inv = remote;
+      saveLocal();
+      renderList();
+      updateStats();
+      if(document.getElementById('page-stats').classList.contains('active')) renderSummary();
+      setSyncUI('ok','已同步');
+      return true;
     }
+  } catch(e) {
+    setSyncUI('err','拉取失败');
+    console.warn('Pull failed:', e.message);
+  }
+  return false;
+}
 
-    // 加载 Gist 配置
-    function loadGistConfig() {
-        const saved = localStorage.getItem(GIST_CONFIG_KEY);
-        if (saved) {
-            try {
-                const cfg = JSON.parse(saved);
-                githubTokenInput.value = cfg.token || "";
-                gistIdInput.value = cfg.gistId || "";
-                if (cfg.filename) gistFilenameSpan.value = cfg.filename;
-            } catch(e) {}
-        }
+// ══════════════════════════════════════
+//  AUTO SYNC (debounced)
+// ══════════════════════════════════════
+function triggerAutoSync() {
+  if(!giteeConfig.autoSync || !isConfigured()) return;
+  clearTimeout(autoSyncTimer);
+  setSyncUI('syncing','待同步…');
+  autoSyncTimer = setTimeout(() => pushToGitee(), 1000); // 1 second debounce
+}
+
+// ══════════════════════════════════════
+//  MANUAL BUTTONS
+// ══════════════════════════════════════
+async function manualSync() {
+  if(!isConfigured()) { toast('请先配置 Gitee','err'); showPage('settings'); return; }
+  clearTimeout(autoSyncTimer);
+  await pushToGitee();
+  toast('同步完成 ✓','ok');
+}
+async function manualPull() {
+  if(!isConfigured()) { toast('请先配置 Gitee','err'); showPage('settings'); return; }
+  const ok = await pullFromGitee();
+  if(ok) toast(`已拉取最新数据 ✓`,'ok');
+  else   toast('拉取失败，请检查配置','err');
+}
+
+// ══════════════════════════════════════
+//  SAVE + AUTO SYNC
+// ══════════════════════════════════════
+function save() {
+  saveLocal();
+  triggerAutoSync();
+}
+
+// ══════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════
+function showPage(n) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+n).classList.add('active');
+  document.getElementById('nav-'+n).classList.add('active');
+  if(n==='stats') renderSummary();
+}
+
+function updateNoConfigNotice() {
+  document.getElementById('noConfigNotice').style.display = isConfigured() ? 'none' : 'block';
+}
+
+// ══════════════════════════════════════
+//  FILTER
+// ══════════════════════════════════════
+function setFilter(m, el) {
+  filterMode=m;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active'); renderList();
+}
+
+// ══════════════════════════════════════
+//  RENDER LIST
+// ══════════════════════════════════════
+function renderList() {
+  const q=(document.getElementById('searchInput').value||'').toLowerCase();
+  let data=[...inv];
+  if(q) data=data.filter(i=>(i.code||'').toLowerCase().includes(q)||(i.brand||'').toLowerCase().includes(q)||(i.color||'').toLowerCase().includes(q)||String(i.size).includes(q)||(i.note||'').toLowerCase().includes(q));
+  if(filterMode==='low')  data=data.filter(i=>i.qty>0&&i.qty<=5);
+  if(filterMode==='zero') data=data.filter(i=>i.qty===0);
+  data.sort((a,b)=>a.code<b.code?-1:a.code>b.code?1:a.size-b.size);
+  const el=document.getElementById('invList'), emp=document.getElementById('emptyState');
+  if(!data.length){el.innerHTML='';emp.style.display='block';return;}
+  emp.style.display='none';
+  el.innerHTML=data.map(item=>`
+    <div class="inv-card" id="card-${item.id}">
+      <div class="inv-card-main">
+        <div class="inv-code-block">
+          <div class="inv-code">${esc(item.code)}</div>
+          <div class="inv-meta">
+            ${item.brand?`<span>${esc(item.brand)}</span>`:''}
+            <span><span class="color-dot" style="background:${swColor(item.color||'')}"></span>${esc(item.color||'—')}</span>
+            <span>码 ${item.size}</span>
+          </div>
+          ${item.cost?`<div style="font-size:12px;color:var(--text2);margin-top:3px">进价 ¥${item.cost}</div>`:''}
+          ${item.note?`<div style="font-size:12px;color:var(--text2);margin-top:2px">📝 ${esc(item.note)}</div>`:''}
+        </div>
+        <div class="qty-block">
+          <div class="qty-num ${qcls(item.qty)}">${item.qty}</div>
+          <div class="qty-label">件</div>
+        </div>
+      </div>
+      <div class="qty-controls">
+        <button class="qty-btn" onclick="adj(${item.id},-1)">－</button>
+        <div class="qty-display" id="qdisplay-${item.id}">${item.qty}</div>
+        <button class="qty-btn" onclick="adj(${item.id},1)">＋</button>
+      </div>
+      <div class="inv-card-footer">
+        <button class="inv-action" onclick="openEdit(${item.id})">✏️ 编辑</button>
+        <button class="inv-action del" onclick="del(${item.id})">🗑 删除</button>
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════
+//  CRUD
+// ══════════════════════════════════════
+function adj(id, d) {
+  const o=inv.find(i=>i.id===id); if(!o) return;
+  o.qty=Math.max(0,o.qty+d);
+  // Update DOM directly (fast, no full re-render)
+  const qn=document.querySelector(`#card-${id} .qty-num`);
+  const qd=document.getElementById(`qdisplay-${id}`);
+  if(qn){ qn.textContent=o.qty; qn.className='qty-num '+qcls(o.qty); }
+  if(qd) qd.textContent=o.qty;
+  save(); updateStats();
+}
+
+function del(id) {
+  if(!confirm('确认删除？')) return;
+  inv=inv.filter(i=>i.id!==id);
+  save(); renderList(); toast('已删除');
+}
+
+function addItem() {
+  const code  = document.getElementById('fCode').value.trim().toUpperCase();
+  const brand = document.getElementById('fBrand').value.trim();
+  const color = document.getElementById('fColor').value.trim();
+  const size  = document.getElementById('fSize').value;
+  const qty   = parseInt(document.getElementById('fQty').value)||0;
+  const cost  = parseFloat(document.getElementById('fCost').value)||0;
+  const note  = document.getElementById('fNote').value.trim();
+  if(!code)  { toast('请填写货号','err'); return; }
+  if(!color) { toast('请填写颜色','err'); return; }
+  if(!size)  { toast('请选择尺码','err'); return; }
+  inv.push({id:Date.now(),code,brand,color,size:parseFloat(size),qty,cost,note,createdAt:new Date().toLocaleString('zh-CN')});
+  save();
+  ['fCode','fBrand','fColor','fQty','fCost','fNote'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fSize').value='';
+  toast('添加成功 ✓','ok'); showPage('stock');
+}
+
+function openEdit(id) {
+  const o=inv.find(i=>i.id===id); if(!o) return;
+  document.getElementById('editId').value=id;
+  document.getElementById('eCode').value=o.code||'';
+  document.getElementById('eBrand').value=o.brand||'';
+  document.getElementById('eColor').value=o.color||'';
+  document.getElementById('eSize').value=o.size||'';
+  document.getElementById('eQty').value=o.qty;
+  document.getElementById('eCost').value=o.cost||'';
+  document.getElementById('eNote').value=o.note||'';
+  document.getElementById('editSheet').classList.add('open');
+}
+function closeSheet(e) { if(e.target===document.getElementById('editSheet')) document.getElementById('editSheet').classList.remove('open'); }
+function saveEdit() {
+  const id=parseInt(document.getElementById('editId').value);
+  const o=inv.find(i=>i.id===id); if(!o) return;
+  o.code=document.getElementById('eCode').value.trim().toUpperCase()||o.code;
+  o.brand=document.getElementById('eBrand').value.trim();
+  o.color=document.getElementById('eColor').value.trim();
+  o.size=parseFloat(document.getElementById('eSize').value)||o.size;
+  o.qty=parseInt(document.getElementById('eQty').value)||0;
+  o.cost=parseFloat(document.getElementById('eCost').value)||0;
+  o.note=document.getElementById('eNote').value.trim();
+  save(); renderList();
+  document.getElementById('editSheet').classList.remove('open');
+  toast('已保存 ✓','ok');
+}
+
+// ══════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════
+function updateStats() {
+  const codes=new Set(inv.map(i=>i.code));
+  document.getElementById('s1').textContent=codes.size;
+  document.getElementById('s2').textContent=inv.length;
+  document.getElementById('s3').textContent=inv.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('s4').textContent=inv.filter(i=>i.qty<=3).length;
+}
+function renderSummary() {
+  updateStats();
+  const map={};
+  inv.forEach(i=>{if(!map[i.code])map[i.code]={code:i.code,brand:i.brand||'',total:0,skus:0};map[i.code].total+=i.qty;map[i.code].skus++;});
+  const list=Object.values(map).sort((a,b)=>a.code<b.code?-1:1);
+  const el=document.getElementById('summaryList');
+  if(!list.length){el.innerHTML='<div class="empty"><div class="e-icon">📊</div><p>暂无数据</p></div>';return;}
+  el.innerHTML=list.map(s=>`
+    <div class="inv-card" style="margin-bottom:8px">
+      <div class="inv-card-main">
+        <div class="inv-code-block">
+          <div class="inv-code">${esc(s.code)}</div>
+          <div class="inv-meta"><span>${esc(s.brand)||'—'}</span><span>${s.skus} 个 SKU</span></div>
+        </div>
+        <div class="qty-block"><div class="qty-num ${qcls(s.total)}">${s.total}</div><div class="qty-label">总库存</div></div>
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════
+//  EXPORT / CLEAR
+// ══════════════════════════════════════
+function exportCSV() {
+  if(!inv.length){toast('暂无数据','err');return;}
+  const h=['货号','品牌','颜色','尺码','数量','进价','备注','时间'];
+  const rows=inv.map(i=>[i.code,i.brand||'',i.color||'',i.size,i.qty,i.cost||'',i.note||'',i.createdAt||'']);
+  const csv='\uFEFF'+[h,...rows].map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`鞋库_${new Date().toLocaleDateString('zh-CN')}.csv`;
+  a.click(); toast('已导出 CSV','ok');
+}
+function clearAll() {
+  if(!confirm('确定清空全部数据？此操作会同步到云端。')) return;
+  inv=[]; save(); renderList(); toast('已清空');
+}
+
+// ══════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════
+let toastTimer;
+function toast(msg,type='') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='show'+(type?' '+type:'');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.className='',2200);
+}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+async function init() {
+  loadLocal();
+  loadGiteeConfig();
+  updateNoConfigNotice();
+
+  if(isConfigured() && giteeConfig.pullOnStart) {
+    document.getElementById('initMsg').textContent = '正在从 Gitee 获取最新数据…';
+    const ok = await pullFromGitee();
+    if(!ok) {
+      // fallback to local
+      setSyncUI('err','拉取失败');
+      document.getElementById('initMsg').textContent = '拉取失败，使用本地数据';
+      await new Promise(r=>setTimeout(r,1000));
     }
+  } else {
+    setSyncUI('','未配置');
+    await new Promise(r=>setTimeout(r,400));
+  }
 
-    function saveGistConfig() {
-        const config = {
-            token: githubTokenInput.value.trim(),
-            gistId: gistIdInput.value.trim(),
-            filename: gistFilenameSpan.value.trim() || "shoe_inventory_backup.json"
-        };
-        localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(config));
-    }
+  renderList();
+  updateStats();
 
-    function getGistConfig() {
-        return {
-            token: githubTokenInput.value.trim(),
-            gistId: gistIdInput.value.trim(),
-            filename: gistFilenameSpan.value.trim() || "shoe_inventory_backup.json"
-        };
-    }
+  // Hide overlay
+  const overlay = document.getElementById('initOverlay');
+  overlay.style.opacity='0'; overlay.style.transition='opacity 0.4s';
+  setTimeout(()=>overlay.style.display='none', 400);
+}
 
-    // ========== GitHub Gist API 操作 ==========
-    // 备份当前库存到 Gist
-    async function backupToGist() {
-        const { token, gistId, filename } = getGistConfig();
-        if (!token || !gistId) {
-            showSyncStatus("❌ 请先填写 GitHub Token 和 Gist ID", true);
-            return;
-        }
-        saveGistConfig();
-
-        const data = JSON.stringify(inventory, null, 2);
-        const apiUrl = `https://api.github.com/gists/${gistId}`;
-
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    files: {
-                        [filename]: { content: data }
-                    }
-                })
-            });
-
-            if (response.ok) {
-                showSyncStatus(`✅ 备份成功！数据已保存到 Gist: ${filename}`, false);
-            } else {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP ${response.status}`);
-            }
-        } catch (err) {
-            console.error(err);
-            showSyncStatus(`❌ 备份失败: ${err.message}`, true);
-        }
-    }
-
-    // 从 Gist 恢复数据
-    async function restoreFromGist() {
-        const { token, gistId, filename } = getGistConfig();
-        if (!token || !gistId) {
-            showSyncStatus("❌ 请先填写 GitHub Token 和 Gist ID", true);
-            return;
-        }
-        saveGistConfig();
-
-        const apiUrl = `https://api.github.com/gists/${gistId}`;
-        try {
-            const response = await fetch(apiUrl, {
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP ${response.status}`);
-            }
-
-            const gistData = await response.json();
-            const fileContent = gistData.files[filename]?.content;
-            if (!fileContent) {
-                throw new Error(`找不到文件 ${filename}，请确认文件名是否正确`);
-            }
-
-            const cloudData = JSON.parse(fileContent);
-            if (Array.isArray(cloudData)) {
-                if (confirm("⚠️ 从云端恢复将覆盖当前所有库存数据，确定继续吗？")) {
-                    inventory = cloudData;
-                    // 数据清洗
-                    inventory.forEach(item => {
-                        item.id = item.id || (Date.now() + '-' + Math.random());
-                        item.quantity = Math.max(0, Number(item.quantity) || 0);
-                        item.articleNumber = item.articleNumber || "";
-                        item.color = item.color || "";
-                        item.size = item.size || "";
-                    });
-                    saveToLocal();
-                    resetForm();
-                    updateStyleFilterOptions();
-                    renderTableAndStats();
-                    showSyncStatus(`✅ 恢复成功，共 ${inventory.length} 条记录`, false);
-                }
-            } else {
-                throw new Error("云端数据格式错误，不是有效的库存数组");
-            }
-        } catch (err) {
-            console.error(err);
-            showSyncStatus(`❌ 恢复失败: ${err.message}`, true);
-        }
-    }
-
-    // ========== 库存管理核心逻辑 ==========
-    function initDemoData() {
-        inventory = [
-            { id: "1", articleNumber: "AIR-JORDAN-1", color: "芝加哥红/白", size: "42", quantity: 12 },
-            { id: "2", articleNumber: "AIR-JORDAN-1", color: "芝加哥红/白", size: "43", quantity: 8 },
-            { id: "3", articleNumber: "AIR-JORDAN-1", color: "黑脚趾", size: "41", quantity: 5 },
-            { id: "4", articleNumber: "YEEZY-350", color: "黑白斑马", size: "42", quantity: 7 },
-            { id: "5", articleNumber: "YEEZY-350", color: "黑红字", size: "42.5", quantity: 3 },
-            { id: "6", articleNumber: "DUNK-LOW", color: "熊猫黑白", size: "39", quantity: 0 },
-            { id: "7", articleNumber: "DUNK-LOW", color: "熊猫黑白", size: "40", quantity: 15 }
-        ];
-        saveToLocal();
-    }
-
-    function loadData() {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            inventory = JSON.parse(stored);
-            if (!inventory.length) initDemoData();
-        } else {
-            initDemoData();
-        }
-        inventory.forEach(item => {
-            item.quantity = Math.max(0, Number(item.quantity) || 0);
-        });
-        updateStyleFilterOptions();
-        renderTableAndStats();
-    }
-
-    function updateStyleFilterOptions() {
-        const stylesSet = new Set(inventory.map(i => i.articleNumber));
-        const sorted = Array.from(stylesSet).sort();
-        let options = '<option value="">全部货号</option>';
-        sorted.forEach(art => options += `<option value="${escapeHtml(art)}">${escapeHtml(art)}</option>`);
-        styleFilterSelect.innerHTML = options;
-        if (styleFilter && sorted.includes(styleFilter)) styleFilterSelect.value = styleFilter;
-        else styleFilterSelect.value = "";
-        totalStylesSpan.innerText = sorted.length;
-    }
-
-    function getFilteredData() {
-        let filtered = [...inventory];
-        if (styleFilter && styleFilter !== "") {
-            filtered = filtered.filter(i => i.articleNumber === styleFilter);
-        }
-        if (keywordFilter && keywordFilter.trim()) {
-            const kw = keywordFilter.trim().toLowerCase();
-            filtered = filtered.filter(i => 
-                i.articleNumber.toLowerCase().includes(kw) ||
-                i.color.toLowerCase().includes(kw) ||
-                i.size.toLowerCase().includes(kw)
-            );
-        }
-        return filtered;
-    }
-
-    function groupByArticle(data) {
-        const map = new Map();
-        for (const item of data) {
-            if (!map.has(item.articleNumber)) map.set(item.articleNumber, []);
-            map.get(item.articleNumber).push(item);
-        }
-        const groups = Array.from(map.entries()).sort((a,b) => a[0].localeCompare(b[0]));
-        return groups.map(([art, items]) => ({ articleNumber: art, items }));
-    }
-
-    function renderTableAndStats() {
-        const filtered = getFilteredData();
-        const groups = groupByArticle(filtered);
-        totalSkuSpan.innerText = inventory.length;
-        totalQtySpan.innerText = inventory.reduce((s,i) => s + i.quantity, 0);
-
-        if (groups.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px;">暂无数据，点击「新增鞋子」添加</td></tr>`;
-            return;
-        }
-
-        let html = "";
-        for (let g of groups) {
-            const totalQ = g.items.reduce((s, it) => s + it.quantity, 0);
-            html += `<tr class="group-row"><td colspan="5"><strong>📌 货号：${escapeHtml(g.articleNumber)}</strong> (${g.items.length}种规格，共${totalQ}双)</td></tr>`;
-            for (let it of g.items) {
-                html += `
-                    <tr data-id="${it.id}">
-                        <td style="padding-left:28px;">${escapeHtml(it.articleNumber)}</td>
-                        <td>${escapeHtml(it.color)}</td>
-                        <td>${escapeHtml(it.size)}</td>
-                        <td><span class="qty-badge">${it.quantity} 双</span></td>
-                        <td class="action-btns">
-                            <button class="icon-btn edit" data-action="edit" data-id="${it.id}">✏️ 编辑</button>
-                            <button class="icon-btn qty-btn" data-action="decr" data-id="${it.id}">➖ 减1</button>
-                            <button class="icon-btn qty-btn" data-action="incr" data-id="${it.id}">➕ 加1</button>
-                            <button class="icon-btn delete" data-action="delete" data-id="${it.id}">🗑️ 删除</button>
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-        tableBody.innerHTML = html;
-    }
-
-    function isDuplicate(article, color, size, excludeId) {
-        const normArt = article.trim().toLowerCase();
-        const normColor = color.trim().toLowerCase();
-        const normSize = size.trim().toLowerCase();
-        return inventory.some(it => 
-            it.id !== excludeId &&
-            it.articleNumber.toLowerCase() === normArt &&
-            it.color.toLowerCase() === normColor &&
-            it.size.toLowerCase() === normSize
-        );
-    }
-
-    function saveInventoryItem() {
-        let article = articleNoInput.value.trim();
-        let color = colorInput.value.trim();
-        let size = sizeInput.value.trim();
-        let quantity = parseInt(quantityInput.value, 10);
-        if (!article || !color || !size) {
-            showMessage("货号、颜色、尺码不能为空", true);
-            return;
-        }
-        if (isNaN(quantity)) quantity = 0;
-        quantity = Math.max(0, quantity);
-
-        if (isDuplicate(article, color, size, editId)) {
-            showMessage("相同货号+颜色+尺码已存在，不可重复", true);
-            return;
-        }
-
-        if (editId === null) {
-            const newId = Date.now() + '-' + Math.random().toString(36).substring(2);
-            inventory.push({ id: newId, articleNumber: article, color, size, quantity });
-            showMessage("✅ 添加成功");
-        } else {
-            const idx = inventory.findIndex(i => i.id === editId);
-            if (idx !== -1) {
-                inventory[idx] = { ...inventory[idx], articleNumber: article, color, size, quantity };
-                showMessage("✏️ 更新成功");
-            } else {
-                showMessage("编辑的记录不存在", true);
-                resetForm();
-                renderTableAndStats();
-                return;
-            }
-        }
-        saveToLocal();
-        resetForm();
-        updateStyleFilterOptions();
-        renderTableAndStats();
-    }
-
-    function deleteItem(id) {
-        const item = inventory.find(i => i.id === id);
-        if (item && confirm(`确定删除「${item.articleNumber} / ${item.color} / ${item.size}」吗？`)) {
-            inventory = inventory.filter(i => i.id !== id);
-            saveToLocal();
-            if (editId === id) resetForm();
-            updateStyleFilterOptions();
-            renderTableAndStats();
-            showMessage("🗑️ 已删除");
-        }
-    }
-
-    function adjustQuantity(id, delta) {
-        const item = inventory.find(i => i.id === id);
-        if (item) {
-            item.quantity = Math.max(0, item.quantity + delta);
-            saveToLocal();
-            renderTableAndStats();
-            showMessage(`📊 ${item.articleNumber} ${item.color} ${item.size} 数量 → ${item.quantity}`);
-        }
-    }
-
-    function fillFormForEdit(item) {
-        articleNoInput.value = item.articleNumber;
-        colorInput.value = item.color;
-        sizeInput.value = item.size;
-        quantityInput.value = item.quantity;
-        editId = item.id;
-        formModeText.innerText = "✏️ 编辑鞋子";
-        document.getElementById("formCard").scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-
-    function resetForm() {
-        articleNoInput.value = "";
-        colorInput.value = "";
-        sizeInput.value = "";
-        quantityInput.value = "0";
-        editId = null;
-        formModeText.innerText = "添加新鞋子";
-    }
-
-    function applyFilters() {
-        styleFilter = styleFilterSelect.value;
-        keywordFilter = searchInput.value;
-        renderTableAndStats();
-    }
-
-    function clearFilters() {
-        styleFilterSelect.value = "";
-        searchInput.value = "";
-        styleFilter = "";
-        keywordFilter = "";
-        renderTableAndStats();
-    }
-
-    function handleTableActions(e) {
-        const btn = e.target;
-        const action = btn.getAttribute("data-action");
-        const id = btn.getAttribute("data-id");
-        if (!action || !id) return;
-        if (action === "edit") {
-            const item = inventory.find(i => i.id === id);
-            if (item) fillFormForEdit(item);
-        } else if (action === "delete") {
-            deleteItem(id);
-        } else if (action === "incr") {
-            adjustQuantity(id, 1);
-        } else if (action === "decr") {
-            adjustQuantity(id, -1);
-        }
-    }
-
-    function escapeHtml(str) {
-        if (!str) return "";
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
-    // 模态框控制
-    function openModal() { modal.style.display = "flex"; }
-    function closeModal() { modal.style.display = "none"; }
-    window.onclick = function(e) { if (e.target === modal) closeModal(); };
-
-    // 绑定事件
-    function bindEvents() {
-        saveBtn.addEventListener("click", saveInventoryItem);
-        cancelBtn.addEventListener("click", resetForm);
-        addNewBtn.addEventListener("click", resetForm);
-        clearFilterBtn.addEventListener("click", clearFilters);
-        styleFilterSelect.addEventListener("change", applyFilters);
-        searchInput.addEventListener("input", applyFilters);
-        tableBody.addEventListener("click", handleTableActions);
-        openSettingsBtn.addEventListener("click", openModal);
-        closeModalBtn.addEventListener("click", closeModal);
-        backupBtn.addEventListener("click", backupToGist);
-        restoreBtn.addEventListener("click", restoreFromGist);
-        githubTokenInput.addEventListener("change", saveGistConfig);
-        gistIdInput.addEventListener("change", saveGistConfig);
-    }
-
-    // 初始化
-    function init() {
-        loadData();
-        loadGistConfig();
-        bindEvents();
-    }
-
-    init();
+init();
 </script>
 </body>
 </html>
