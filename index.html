@@ -2,498 +2,863 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋子库存管理系统（Gitee版）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>鞋库管理系统 · GitHub Gist 云端同步</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+
         body {
-            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #e0e5ec 0%, #c9d1da 100%);
-            min-height: 100vh; padding: 20px; color: #333;
+            background: #f4f7fc;
+            padding: 24px 20px;
+            color: #1e2a3e;
         }
-        .container { max-width: 1200px; margin: 0 auto; }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 头部区域 */
         .header {
-            text-align: center; margin-bottom: 20px; padding: 25px;
-            background: linear-gradient(135deg, #2c3e50, #3498db);
-            border-radius: 16px; color: white; position: relative;
-            box-shadow: 0 8px 32px rgba(44, 62, 80, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
         }
-        .header h1 { font-size: 2em; margin-bottom: 5px; letter-spacing: 2px; }
-        .header p { opacity: 0.85; font-size: 0.95em; }
-        .settings-btn {
-            position: absolute; top: 15px; right: 20px;
-            background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
-            color: white; padding: 8px 15px; border-radius: 20px;
-            font-size: 0.9em; cursor: pointer; transition: all 0.3s;
+        .title-area h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1f3a5f, #2b4c7c);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
         }
-        .settings-btn:hover { background: rgba(255,255,255,0.35); }
-        .sync-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 12px;
-            font-size: 0.75em; margin-top: 10px;
+        .sub {
+            color: #5a6e8a;
+            font-size: 0.85rem;
+            border-left: 3px solid #3b82f6;
+            padding-left: 12px;
+            margin-top: 4px;
         }
-        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #27ae60; }
-        .sync-dot.error { background: #e74c3c; }
-        .sync-dot.waiting { background: #f1c40f; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-        .stats-bar { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .cloud-settings-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 60px;
+            padding: 8px 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .cloud-settings-btn:hover {
+            background: #eef2ff;
+            border-color: #3b82f6;
+        }
+
+        /* 统计卡片 */
+        .stats {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
         .stat-card {
-            flex: 1; min-width: 150px; background: white; padding: 20px;
-            border-radius: 12px; text-align: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            background: white;
+            border-radius: 24px;
+            padding: 12px 20px;
+            border: 1px solid #e2e8f0;
+            flex: 1;
+            min-width: 120px;
         }
-        .stat-card .number {
-            font-size: 2em; font-weight: 700;
-            background: linear-gradient(135deg, #3498db, #2c3e50);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        .stat-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #5b6e8c;
         }
-        .stat-card .label { font-size: 0.85em; color: #888; margin-top: 5px; }
-        .form-panel {
-            background: white; border-radius: 16px; padding: 25px;
-            margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #0f2b3d;
         }
-        .form-panel h2 { font-size: 1.3em; margin-bottom: 20px; color: #2c3e50; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
-        .form-group { display: flex; flex-direction: column; }
-        .form-group label { font-size: 0.85em; font-weight: 600; color: #555; margin-bottom: 6px; }
-        .form-group input, .form-group select {
-            padding: 10px 14px; border: 2px solid #e0e5ec; border-radius: 10px;
-            font-size: 0.95em; outline: none; background: #f8f9fa;
+
+        /* 工具栏 */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            background: white;
+            padding: 8px 18px;
+            border-radius: 60px;
+            border: 1px solid #e9edf2;
         }
-        .form-group input:focus { border-color: #3498db; background: white; }
-        .form-actions { display: flex; gap: 10px; margin-top: 15px; }
-        .btn {
-            padding: 10px 24px; border: none; border-radius: 10px; font-size: 0.95em;
-            font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+        .filter-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
         }
-        .btn-success { background: linear-gradient(135deg, #27ae60, #219a52); color: white; }
-        .btn-secondary { background: #95a5a6; color: white; }
-        .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; }
-        .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
-        .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
-        .btn-sm { padding: 6px 14px; font-size: 0.82em; }
-        .toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-        .search-box { flex: 1; min-width: 250px; position: relative; }
-        .search-box input {
-            width: 100%; padding: 10px 14px 10px 40px; border: 2px solid #e0e5ec;
-            border-radius: 10px; font-size: 0.95em; outline: none; background: white;
+        .filter-group input, .filter-group select {
+            padding: 8px 14px;
+            border-radius: 40px;
+            border: 1px solid #cfdfed;
+            background: #fafcff;
+            font-size: 0.8rem;
         }
-        .search-box::before { content: "🔍"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); }
-        .filter-select { padding: 10px 14px; border: 2px solid #e0e5ec; border-radius: 10px; background: white; }
-        .table-container { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
-        .table-container table { width: 100%; border-collapse: collapse; }
-        .table-container thead { background: linear-gradient(135deg, #2c3e50, #34495e); color: white; }
-        .table-container th { padding: 14px 16px; text-align: left; font-weight: 600; }
-        .table-container td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
-        .main-row { cursor: pointer; }
-        .main-row:hover { background: #f8f9fa; }
-        .detail-row { background: #fafbfc; }
-        .toggle-icon { cursor: pointer; color: #3498db; font-size: 1.2em; }
-        .toggle-icon.expanded { transform: rotate(90deg); display: inline-block; }
-        .product-id { font-weight: 700; color: #2c3e50; font-family: monospace; }
-        .color-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.82em; color: white; }
-        .quantity-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
-        .quantity-high { background: #d4edda; color: #155724; }
-        .quantity-medium { background: #fff3cd; color: #856404; }
-        .quantity-low { background: #f8d7da; color: #721c24; }
-        .empty-state { text-align: center; padding: 60px 20px; color: #aaa; }
-        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; }
-        .toast {
-            padding: 12px 20px; border-radius: 10px; color: white; margin-bottom: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); animation: slideIn 0.3s ease;
+        .btn-primary {
+            background: #1e3a5f;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
         }
-        .toast-success { background: #27ae60; }
-        .toast-error { background: #e74c3c; }
-        .toast-warning { background: #f39c12; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); z-index: 999; justify-content: center; align-items: center;
+        .btn-secondary {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 8px 18px;
+            border-radius: 40px;
+            cursor: pointer;
         }
-        .modal-overlay.active { display: flex; }
+
+        /* 表格 */
+        .table-wrapper {
+            background: white;
+            border-radius: 24px;
+            border: 1px solid #eef2f8;
+            overflow-x: auto;
+        }
+        .inventory-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 700px;
+        }
+        .inventory-table th {
+            text-align: left;
+            padding: 14px 12px;
+            background: #fafdff;
+            font-weight: 600;
+            color: #2c4b74;
+            border-bottom: 2px solid #e9edf2;
+        }
+        .inventory-table td {
+            padding: 12px 12px;
+            border-bottom: 1px solid #f0f2f6;
+        }
+        .group-row td {
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: #2d5a87;
+            border-top: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .qty-badge {
+            background: #eef2ff;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-weight: 700;
+        }
+        .action-btns {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .icon-btn {
+            background: transparent;
+            border: 1px solid #e2e8f0;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .icon-btn.edit { background: #eef2ff; color: #2563eb; }
+        .icon-btn.delete { background: #fff5f5; color: #dc2626; }
+        .icon-btn.qty-btn { background: #f8fafc; font-weight: 700; }
+
+        /* 表单卡片 */
+        .form-card {
+            background: white;
+            border-radius: 24px;
+            padding: 18px 22px;
+            margin-top: 28px;
+            border: 1px solid #eef2f8;
+        }
+        .form-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+        }
+        .input-group {
+            flex: 1;
+            min-width: 130px;
+        }
+        .input-group label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 20px;
+            border: 1.5px solid #e2e8f0;
+        }
+        .form-actions {
+            display: flex;
+            gap: 12px;
+        }
+        .message {
+            margin-top: 12px;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            display: inline-block;
+        }
+
+        /* 模态框 */
         .modal {
-            background: white; border-radius: 16px; padding: 30px; max-width: 500px; width: 90%;
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
         }
-        .modal h3 { margin-bottom: 20px; color: #2c3e50; }
-        .modal p { color: #666; margin-bottom: 15px; }
-        .modal .form-group { margin-bottom: 15px; }
-        .modal .form-group input { width: 100%; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-        .help-text { font-size: 0.8em; color: #999; margin-top: 4px; }
-        .help-text a { color: #3498db; }
+        .modal-content {
+            background: white;
+            border-radius: 32px;
+            width: 90%;
+            max-width: 520px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 24px 28px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .sync-field {
+            margin-bottom: 18px;
+        }
+        .sync-field label {
+            font-weight: 600;
+            font-size: 0.75rem;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .sync-field input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.8rem;
+        }
+        .sync-buttons {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0 12px;
+        }
+        .btn-sync {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 1;
+        }
+        .btn-sync-outline {
+            background: white;
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
+        }
+        .help-text {
+            font-size: 0.7rem;
+            color: #5b6e8c;
+            margin-top: 20px;
+            border-top: 1px solid #edf2f7;
+            padding-top: 16px;
+        }
+        .help-text details {
+            margin-top: 8px;
+        }
+        .help-text summary {
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .status-msg {
+            font-size: 0.7rem;
+            margin-top: 12px;
+            padding: 8px;
+            border-radius: 16px;
+            background: #f1f5f9;
+        }
+        footer {
+            margin-top: 32px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #7c8ea0;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>👟 鞋子库存管理系统</h1>
-            <p>货号自动归类 · Gitee 免费云同步</p>
-            <div class="sync-badge">
-                <span class="sync-dot" id="syncDot"></span>
-                <span id="syncText">仅本地模式</span>
-            </div>
-            <button class="settings-btn" onclick="openSettings()">⚙️ 设置</button>
+<div class="container">
+    <div class="header">
+        <div class="title-area">
+            <h1>👟 鞋库管理系统</h1>
+            <div class="sub">货号归类 · 本地存储 + GitHub Gist 云端同步</div>
         </div>
-        <div class="stats-bar">
-            <div class="stat-card"><div class="number" id="totalProducts">0</div><div class="label">商品款式</div></div>
-            <div class="stat-card"><div class="number" id="totalQuantity">0</div><div class="label">库存总量</div></div>
-            <div class="stat-card"><div class="number" id="totalColors">0</div><div class="label">颜色种类</div></div>
-            <div class="stat-card"><div class="number" id="lowStock">0</div><div class="label">库存预警</div></div>
+        <button id="openSettingsBtn" class="cloud-settings-btn">☁️ 云端设置</button>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card"><div class="stat-label">📦 总SKU数</div><div class="stat-number" id="totalSku">0</div></div>
+        <div class="stat-card"><div class="stat-label">👟 总库存量</div><div class="stat-number" id="totalQty">0</div></div>
+        <div class="stat-card"><div class="stat-label">🏷️ 款式数</div><div class="stat-number" id="totalStyles">0</div></div>
+    </div>
+
+    <div class="toolbar">
+        <div class="filter-group">
+            <select id="styleFilterSelect"><option value="">全部货号</option></select>
+            <input type="text" id="searchInput" placeholder="颜色/尺码/货号关键词">
+            <button id="clearFilterBtn" class="btn-secondary">✖ 清除</button>
         </div>
-        <div class="form-panel">
-            <h2>📦 添加新商品</h2>
-            <div class="form-grid">
-                <div class="form-group"><label>货号</label><input type="text" id="productId" placeholder="SN-2024-001"></div>
-                <div class="form-group"><label>颜色</label><input type="text" id="productColor" placeholder="黑色/白色/红色..."></div>
-                <div class="form-group"><label>尺码</label>
-                    <select id="productSize">
-                        <option value="">请选择</option>
-                        <option value="35">35</option><option value="36">36</option><option value="37">37</option>
-                        <option value="38">38</option><option value="39">39</option><option value="40">40</option>
-                        <option value="41">41</option><option value="42">42</option><option value="43">43</option>
-                        <option value="44">44</option><option value="45">45</option><option value="46">46</option>
-                    </select>
+        <button id="addNewBtn" class="btn-primary">+ 新增鞋子</button>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="inventory-table">
+            <thead><tr><th>货号</th><th>颜色</th><th>尺码</th><th>数量</th><th>操作</th></tr></thead>
+            <tbody id="tableBody"><tr><td colspan="5">加载中...</td></tr></tbody>
+        </table>
+    </div>
+
+    <div class="form-card" id="formCard">
+        <div style="font-weight:600; margin-bottom:12px;"><span id="formModeText">添加新鞋子</span></div>
+        <div class="form-grid">
+            <div class="input-group"><label>货号 *</label><input type="text" id="articleNo" placeholder="例: AQ2567"></div>
+            <div class="input-group"><label>颜色 *</label><input type="text" id="color" placeholder="白/黑/红"></div>
+            <div class="input-group"><label>尺码 *</label><input type="text" id="size" placeholder="42"></div>
+            <div class="input-group"><label>数量</label><input type="number" id="quantity" min="0" value="0"></div>
+            <div class="form-actions"><button id="saveBtn" class="btn-primary">💾 保存</button><button id="cancelBtn" class="btn-secondary">取消</button></div>
+        </div>
+        <div id="formMessage" class="message" style="display:none;"></div>
+    </div>
+    <footer>数据自动保存至浏览器 | 点击「云端设置」配置 GitHub Gist 实现免费备份与恢复</footer>
+</div>
+
+<!-- 云端设置模态框 -->
+<div id="syncModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><span>☁️ GitHub Gist 同步</span><button class="close-modal">&times;</button></div>
+        <div class="sync-field"><label>GitHub Personal Access Token</label><input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx"></div>
+        <div class="sync-field"><label>Gist ID</label><input type="text" id="gistId" placeholder="例如: 1a2b3c4d5e6f7g8h9i0j"></div>
+        <div class="sync-field"><label>云端文件名 (固定)</label><input type="text" id="gistFilename" value="shoe_inventory_backup.json" readonly style="background:#f1f5f9;"></div>
+        <div class="sync-buttons">
+            <button id="backupToGistBtn" class="btn-sync">⬆️ 备份到云端</button>
+            <button id="restoreFromGistBtn" class="btn-sync btn-sync-outline">⬇️ 从云端恢复</button>
+        </div>
+        <div id="syncStatus" class="status-msg">💡 配置后即可免费备份/恢复库存数据</div>
+        <div class="help-text">
+            <details>
+                <summary>📖 GitHub Gist 免费使用说明</summary>
+                <div style="margin-top:8px;">
+                    1. 登录 GitHub，访问 <a href="https://gist.github.com" target="_blank">gist.github.com</a> 新建一个私密代码片段（内容可留空）。<br>
+                    2. 复制浏览器地址栏中的 Gist ID（例如 https://gist.github.com/你的用户名/1a2b3c4d5e6f → ID 为 "1a2b3c4d5e6f"）。<br>
+                    3. 前往 <a href="https://github.com/settings/tokens/new" target="_blank">GitHub Token 设置页</a>，勾选 <strong>gist</strong> 权限，生成 Token 并复制保存。<br>
+                    4. 将 Token 和 Gist ID 填入上方，点击「备份到云端」上传当前库存。<br>
+                    5. 「从云端恢复」将拉取最新备份并覆盖本地数据。<br>
+                    ✅ 免费且无流量限制，个人使用完全足够。<br>
+                    ⚠️ Token 仅保存在浏览器本地，请勿泄露。
                 </div>
-                <div class="form-group"><label>数量</label><input type="number" id="productQuantity" placeholder="0"></div>
-            </div>
-            <div class="form-actions">
-                <button class="btn btn-success" onclick="addProduct()">➕ 添加</button>
-                <button class="btn btn-secondary" onclick="resetForm()">🔄 重置</button>
-            </div>
-        </div>
-        <div class="toolbar">
-            <div class="search-box"><input type="text" id="searchInput" placeholder="搜索货号..." oninput="renderTable()"></div>
-            <select class="filter-select" id="filterColor" onchange="renderTable()"><option value="">全部颜色</option></select>
-            <select class="filter-select" id="filterSize" onchange="renderTable()"><option value="">全部尺码</option></select>
-            <button class="btn btn-primary" onclick="exportData()">📥 导出</button>
-            <button class="btn btn-warning" onclick="importData()">📤 导入</button>
-            <button class="btn btn-secondary" onclick="forceSync()">🔄 手动同步</button>
-        </div>
-        <div class="table-container">
-            <table><thead><tr><th style="width:40px"></th><th>货号</th><th>规格统计</th><th>总库存</th><th>操作</th></tr></thead><tbody id="tableBody"></tbody></table>
+            </details>
         </div>
     </div>
+</div>
 
-    <!-- 设置弹窗 -->
-    <div class="modal-overlay" id="settingsModal">
-        <div class="modal">
-            <h3>⚙️ Gitee 云同步配置</h3>
-            <p>使用 Gitee Gist 实现免费云同步<br>
-            <small>👉 <a href="https://gitee.com/profile/personal_access_tokens" target="_blank">点我生成 Token</a> (需勾选 gists 权限)</small></p>
-            <div class="form-group">
-                <label>Gitee Personal Token</label>
-                <input type="password" id="settingToken" placeholder="粘贴你的 Token">
-                <div class="help-text">Token 仅保存在本地浏览器，安全可控</div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeSettings()">取消</button>
-                <button class="btn btn-success" onclick="saveConfig()">💾 保存配置</button>
-            </div>
-        </div>
-    </div>
+<script>
+    // ---------- 存储 KEY ----------
+    const STORAGE_KEY = "shoe_inventory_flat_group";
+    const GIST_CONFIG_KEY = "gist_sync_config";
 
-    <script>
-        // ========== 配置管理 ==========
-        const GIST_FILE = 'shoe_inventory.json';
-        let config = JSON.parse(localStorage.getItem('giteeConfig')) || {};
-        let products = JSON.parse(localStorage.getItem('shoeInventory')) || [];
-        let isSyncing = false;
+    // 全局库存数据
+    let inventory = [];
+    let editId = null;
+    let styleFilter = "";
+    let keywordFilter = "";
 
-        // ========== 云端同步函数 ==========
-        async function syncToCloud() {
-            if (!config.token) return;
-            isSyncing = true;
-            updateSyncUI('同步中...', 'waiting');
-            
+    // DOM 元素
+    const tableBody = document.getElementById("tableBody");
+    const totalSkuSpan = document.getElementById("totalSku");
+    const totalQtySpan = document.getElementById("totalQty");
+    const totalStylesSpan = document.getElementById("totalStyles");
+    const styleFilterSelect = document.getElementById("styleFilterSelect");
+    const searchInput = document.getElementById("searchInput");
+    const clearFilterBtn = document.getElementById("clearFilterBtn");
+    const addNewBtn = document.getElementById("addNewBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const articleNoInput = document.getElementById("articleNo");
+    const colorInput = document.getElementById("color");
+    const sizeInput = document.getElementById("size");
+    const quantityInput = document.getElementById("quantity");
+    const formModeText = document.getElementById("formModeText");
+    const formMessageDiv = document.getElementById("formMessage");
+
+    // 模态框相关
+    const modal = document.getElementById("syncModal");
+    const openSettingsBtn = document.getElementById("openSettingsBtn");
+    const closeModalBtn = document.querySelector(".close-modal");
+    const githubTokenInput = document.getElementById("githubToken");
+    const gistIdInput = document.getElementById("gistId");
+    const gistFilenameSpan = document.getElementById("gistFilename");
+    const backupBtn = document.getElementById("backupToGistBtn");
+    const restoreBtn = document.getElementById("restoreFromGistBtn");
+    const syncStatusDiv = document.getElementById("syncStatus");
+
+    // ========== 辅助函数 ==========
+    function showMessage(text, isError = false, targetDiv = formMessageDiv) {
+        targetDiv.style.display = "block";
+        targetDiv.textContent = text;
+        targetDiv.style.backgroundColor = isError ? "#fee2e2" : "#e0f2fe";
+        targetDiv.style.color = isError ? "#b91c1c" : "#0c4a6e";
+        setTimeout(() => {
+            if(targetDiv) targetDiv.style.display = "none";
+        }, 2800);
+    }
+
+    function showSyncStatus(msg, isError = false) {
+        syncStatusDiv.innerHTML = msg;
+        syncStatusDiv.style.backgroundColor = isError ? "#fee2e2" : "#e6f7e6";
+        syncStatusDiv.style.color = isError ? "#b91c1c" : "#166534";
+        setTimeout(() => {
+            if(syncStatusDiv) syncStatusDiv.style.backgroundColor = "#f1f5f9";
+        }, 4000);
+    }
+
+    function saveToLocal() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
+    }
+
+    // 加载 Gist 配置
+    function loadGistConfig() {
+        const saved = localStorage.getItem(GIST_CONFIG_KEY);
+        if (saved) {
             try {
-                // 先尝试获取现有 Gist
-                let gistId = config.gistId;
-                if (!gistId) {
-                    // 创建新 Gist
-                    const createRes = await fetch(`https://gitee.com/api/v5/gists?access_token=${config.token}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            description: '鞋子库存数据',
-                            public: false,
-                            files: { [GIST_FILE]: { content: JSON.stringify({ products, lastSync: new Date().toISOString() }) } }
-                        })
-                    });
-                    
-                    if (!createRes.ok) throw new Error('创建失败');
-                    const createData = await createRes.json();
-                    gistId = createData.id;
-                    config.gistId = gistId;
-                    localStorage.setItem('giteeConfig', JSON.stringify(config));
-                } else {
-                    // 更新现有 Gist
-                    const updateRes = await fetch(`https://gitee.com/api/v5/gists/${gistId}?access_token=${config.token}`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            files: { [GIST_FILE]: { content: JSON.stringify({ products, lastSync: new Date().toISOString() }) } }
-                        })
-                    });
-                    
-                    if (!updateRes.ok) throw new Error('更新失败');
-                }
-                
-                updateSyncUI('已同步云端', 'success');
-            } catch (e) {
-                console.error('同步失败:', e);
-                updateSyncUI('同步失败', 'error');
-                showToast('云端同步失败：' + e.message, 'error');
-            }
-            isSyncing = false;
+                const cfg = JSON.parse(saved);
+                githubTokenInput.value = cfg.token || "";
+                gistIdInput.value = cfg.gistId || "";
+                if (cfg.filename) gistFilenameSpan.value = cfg.filename;
+            } catch(e) {}
         }
+    }
 
-        async function loadFromCloud() {
-            if (!config.token || !config.gistId) return false;
-            
-            try {
-                const res = await fetch(`https://gitee.com/api/v5/gists/${config.gistId}?access_token=${config.token}`);
-                if (!res.ok) throw new Error('加载失败');
-                
-                const data = await res.json();
-                const content = JSON.parse(data.files[GIST_FILE].content);
-                
-                if (content.products) {
-                    products = content.products;
-                    localStorage.setItem('shoeInventory', JSON.stringify(products));
-                    updateSyncUI('已同步云端', 'success');
-                    return true;
-                }
-            } catch (e) {
-                console.error('加载失败:', e);
-                updateSyncUI('加载失败', 'error');
-            }
-            return false;
+    function saveGistConfig() {
+        const config = {
+            token: githubTokenInput.value.trim(),
+            gistId: gistIdInput.value.trim(),
+            filename: gistFilenameSpan.value.trim() || "shoe_inventory_backup.json"
+        };
+        localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(config));
+    }
+
+    function getGistConfig() {
+        return {
+            token: githubTokenInput.value.trim(),
+            gistId: gistIdInput.value.trim(),
+            filename: gistFilenameSpan.value.trim() || "shoe_inventory_backup.json"
+        };
+    }
+
+    // ========== GitHub Gist API 操作 ==========
+    // 备份当前库存到 Gist
+    async function backupToGist() {
+        const { token, gistId, filename } = getGistConfig();
+        if (!token || !gistId) {
+            showSyncStatus("❌ 请先填写 GitHub Token 和 Gist ID", true);
+            return;
         }
+        saveGistConfig();
 
-        function updateSyncUI(text, type) {
-            const dot = document.getElementById('syncDot');
-            const txt = document.getElementById('syncText');
-            txt.textContent = text;
-            dot.className = 'sync-dot' + (type === 'error' ? ' error' : type === 'waiting' ? ' waiting' : '');
-        }
+        const data = JSON.stringify(inventory, null, 2);
+        const apiUrl = `https://api.github.com/gists/${gistId}`;
 
-        function saveConfig() {
-            const token = document.getElementById('settingToken').value.trim();
-            if (!token) return showToast('请输入 Token', 'error');
-            
-            config = { token, gistId: null };
-            localStorage.setItem('giteeConfig', JSON.stringify(config));
-            closeSettings();
-            showToast('配置保存成功！正在创建云端存储...', 'success');
-            
-            setTimeout(() => {
-                syncToCloud().then(() => {
-                    renderTable();
-                    updateStats();
-                });
-            }, 500);
-        }
-
-        function openSettings() {
-            document.getElementById('settingToken').value = config.token || '';
-            document.getElementById('settingsModal').classList.add('active');
-        }
-        function closeSettings() {
-            document.getElementById('settingsModal').classList.remove('active');
-        }
-
-        // ========== 业务逻辑 ==========
-        function addProduct() {
-            const id = document.getElementById('productId').value.trim();
-            const color = document.getElementById('productColor').value.trim();
-            const size = document.getElementById('productSize').value;
-            const qty = parseInt(document.getElementById('productQuantity').value) || 0;
-
-            if (!id || !color || !size) return showToast('请填写完整信息', 'error');
-
-            const existing = products.find(p => p.id === id && p.color === color && p.size === size);
-            if (existing) {
-                existing.quantity += qty;
-                showToast('库存已追加', 'success');
-            } else {
-                products.push({ id, color, size, quantity: qty, updatedAt: new Date().toLocaleString() });
-                showToast('添加成功', 'success');
-            }
-
-            localStorage.setItem('shoeInventory', JSON.stringify(products));
-            renderTable();
-            updateStats();
-            syncToCloud();
-            resetForm();
-        }
-
-        function resetForm() {
-            ['productId', 'productColor', 'productSize', 'productQuantity'].forEach(id => document.getElementById(id).value = '');
-        }
-
-        function renderTable() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const fColor = document.getElementById('filterColor').value;
-            const fSize = document.getElementById('filterSize').value;
-            const tbody = document.getElementById('tableBody');
-
-            let filtered = products.filter(p => 
-                p.id.toLowerCase().includes(search) && 
-                (!fColor || p.color === fColor) && 
-                (!fSize || p.size === fSize)
-            );
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">📭 暂无数据</div></td></tr>';
-                return;
-            }
-
-            const groups = new Map();
-            filtered.forEach(p => {
-                if (!groups.has(p.id)) groups.set(p.id, { id: p.id, variants: [], total: 0 });
-                groups.get(p.id).variants.push(p);
-                groups.get(p.id).total += p.quantity;
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    files: {
+                        [filename]: { content: data }
+                    }
+                })
             });
 
-            let html = '';
-            groups.forEach(g => {
-                const colors = [...new Set(g.variants.map(v => v.color))];
-                const sizes = [...new Set(g.variants.map(v => v.size))];
-                
+            if (response.ok) {
+                showSyncStatus(`✅ 备份成功！数据已保存到 Gist: ${filename}`, false);
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP ${response.status}`);
+            }
+        } catch (err) {
+            console.error(err);
+            showSyncStatus(`❌ 备份失败: ${err.message}`, true);
+        }
+    }
+
+    // 从 Gist 恢复数据
+    async function restoreFromGist() {
+        const { token, gistId, filename } = getGistConfig();
+        if (!token || !gistId) {
+            showSyncStatus("❌ 请先填写 GitHub Token 和 Gist ID", true);
+            return;
+        }
+        saveGistConfig();
+
+        const apiUrl = `https://api.github.com/gists/${gistId}`;
+        try {
+            const response = await fetch(apiUrl, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP ${response.status}`);
+            }
+
+            const gistData = await response.json();
+            const fileContent = gistData.files[filename]?.content;
+            if (!fileContent) {
+                throw new Error(`找不到文件 ${filename}，请确认文件名是否正确`);
+            }
+
+            const cloudData = JSON.parse(fileContent);
+            if (Array.isArray(cloudData)) {
+                if (confirm("⚠️ 从云端恢复将覆盖当前所有库存数据，确定继续吗？")) {
+                    inventory = cloudData;
+                    // 数据清洗
+                    inventory.forEach(item => {
+                        item.id = item.id || (Date.now() + '-' + Math.random());
+                        item.quantity = Math.max(0, Number(item.quantity) || 0);
+                        item.articleNumber = item.articleNumber || "";
+                        item.color = item.color || "";
+                        item.size = item.size || "";
+                    });
+                    saveToLocal();
+                    resetForm();
+                    updateStyleFilterOptions();
+                    renderTableAndStats();
+                    showSyncStatus(`✅ 恢复成功，共 ${inventory.length} 条记录`, false);
+                }
+            } else {
+                throw new Error("云端数据格式错误，不是有效的库存数组");
+            }
+        } catch (err) {
+            console.error(err);
+            showSyncStatus(`❌ 恢复失败: ${err.message}`, true);
+        }
+    }
+
+    // ========== 库存管理核心逻辑 ==========
+    function initDemoData() {
+        inventory = [
+            { id: "1", articleNumber: "AIR-JORDAN-1", color: "芝加哥红/白", size: "42", quantity: 12 },
+            { id: "2", articleNumber: "AIR-JORDAN-1", color: "芝加哥红/白", size: "43", quantity: 8 },
+            { id: "3", articleNumber: "AIR-JORDAN-1", color: "黑脚趾", size: "41", quantity: 5 },
+            { id: "4", articleNumber: "YEEZY-350", color: "黑白斑马", size: "42", quantity: 7 },
+            { id: "5", articleNumber: "YEEZY-350", color: "黑红字", size: "42.5", quantity: 3 },
+            { id: "6", articleNumber: "DUNK-LOW", color: "熊猫黑白", size: "39", quantity: 0 },
+            { id: "7", articleNumber: "DUNK-LOW", color: "熊猫黑白", size: "40", quantity: 15 }
+        ];
+        saveToLocal();
+    }
+
+    function loadData() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            inventory = JSON.parse(stored);
+            if (!inventory.length) initDemoData();
+        } else {
+            initDemoData();
+        }
+        inventory.forEach(item => {
+            item.quantity = Math.max(0, Number(item.quantity) || 0);
+        });
+        updateStyleFilterOptions();
+        renderTableAndStats();
+    }
+
+    function updateStyleFilterOptions() {
+        const stylesSet = new Set(inventory.map(i => i.articleNumber));
+        const sorted = Array.from(stylesSet).sort();
+        let options = '<option value="">全部货号</option>';
+        sorted.forEach(art => options += `<option value="${escapeHtml(art)}">${escapeHtml(art)}</option>`);
+        styleFilterSelect.innerHTML = options;
+        if (styleFilter && sorted.includes(styleFilter)) styleFilterSelect.value = styleFilter;
+        else styleFilterSelect.value = "";
+        totalStylesSpan.innerText = sorted.length;
+    }
+
+    function getFilteredData() {
+        let filtered = [...inventory];
+        if (styleFilter && styleFilter !== "") {
+            filtered = filtered.filter(i => i.articleNumber === styleFilter);
+        }
+        if (keywordFilter && keywordFilter.trim()) {
+            const kw = keywordFilter.trim().toLowerCase();
+            filtered = filtered.filter(i => 
+                i.articleNumber.toLowerCase().includes(kw) ||
+                i.color.toLowerCase().includes(kw) ||
+                i.size.toLowerCase().includes(kw)
+            );
+        }
+        return filtered;
+    }
+
+    function groupByArticle(data) {
+        const map = new Map();
+        for (const item of data) {
+            if (!map.has(item.articleNumber)) map.set(item.articleNumber, []);
+            map.get(item.articleNumber).push(item);
+        }
+        const groups = Array.from(map.entries()).sort((a,b) => a[0].localeCompare(b[0]));
+        return groups.map(([art, items]) => ({ articleNumber: art, items }));
+    }
+
+    function renderTableAndStats() {
+        const filtered = getFilteredData();
+        const groups = groupByArticle(filtered);
+        totalSkuSpan.innerText = inventory.length;
+        totalQtySpan.innerText = inventory.reduce((s,i) => s + i.quantity, 0);
+
+        if (groups.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px;">暂无数据，点击「新增鞋子」添加</td></tr>`;
+            return;
+        }
+
+        let html = "";
+        for (let g of groups) {
+            const totalQ = g.items.reduce((s, it) => s + it.quantity, 0);
+            html += `<tr class="group-row"><td colspan="5"><strong>📌 货号：${escapeHtml(g.articleNumber)}</strong> (${g.items.length}种规格，共${totalQ}双)</td></tr>`;
+            for (let it of g.items) {
                 html += `
-                    <tr class="main-row" onclick="toggleRow('${g.id}')">
-                        <td><span class="toggle-icon" id="icon-${g.id}">▶</span></td>
-                        <td><span class="product-id">${g.id}</span></td>
-                        <td>${colors.length}色 / ${sizes.length}码</td>
-                        <td><strong>${g.total}</strong></td>
-                        <td><button class="btn btn-primary btn-sm" onclick="event.stopPropagation()">编辑</button></td>
-                    </tr>
-                    <tr id="detail-${g.id}" style="display:none">
-                        <td colspan="5">
-                            <table style="width:100%">
-                                ${g.variants.map(v => `
-                                    <tr>
-                                        <td><span class="color-badge" style="background:${getColorCode(v.color)}">${v.color}</span></td>
-                                        <td>${v.size}码</td>
-                                        <td><span class="quantity-badge ${getQtyClass(v.quantity)}">${v.quantity}双</span></td>
-                                        <td>${v.updatedAt}</td>
-                                    </tr>
-                                `).join('')}
-                            </table>
+                    <tr data-id="${it.id}">
+                        <td style="padding-left:28px;">${escapeHtml(it.articleNumber)}</td>
+                        <td>${escapeHtml(it.color)}</td>
+                        <td>${escapeHtml(it.size)}</td>
+                        <td><span class="qty-badge">${it.quantity} 双</span></td>
+                        <td class="action-btns">
+                            <button class="icon-btn edit" data-action="edit" data-id="${it.id}">✏️ 编辑</button>
+                            <button class="icon-btn qty-btn" data-action="decr" data-id="${it.id}">➖ 减1</button>
+                            <button class="icon-btn qty-btn" data-action="incr" data-id="${it.id}">➕ 加1</button>
+                            <button class="icon-btn delete" data-action="delete" data-id="${it.id}">🗑️ 删除</button>
                         </td>
                     </tr>
                 `;
-            });
+            }
+        }
+        tableBody.innerHTML = html;
+    }
 
-            tbody.innerHTML = html;
+    function isDuplicate(article, color, size, excludeId) {
+        const normArt = article.trim().toLowerCase();
+        const normColor = color.trim().toLowerCase();
+        const normSize = size.trim().toLowerCase();
+        return inventory.some(it => 
+            it.id !== excludeId &&
+            it.articleNumber.toLowerCase() === normArt &&
+            it.color.toLowerCase() === normColor &&
+            it.size.toLowerCase() === normSize
+        );
+    }
+
+    function saveInventoryItem() {
+        let article = articleNoInput.value.trim();
+        let color = colorInput.value.trim();
+        let size = sizeInput.value.trim();
+        let quantity = parseInt(quantityInput.value, 10);
+        if (!article || !color || !size) {
+            showMessage("货号、颜色、尺码不能为空", true);
+            return;
+        }
+        if (isNaN(quantity)) quantity = 0;
+        quantity = Math.max(0, quantity);
+
+        if (isDuplicate(article, color, size, editId)) {
+            showMessage("相同货号+颜色+尺码已存在，不可重复", true);
+            return;
         }
 
-        function toggleRow(id) {
-            const row = document.getElementById(`detail-${id}`);
-            const icon = document.getElementById(`icon-${id}`);
-            if (row.style.display === 'none') {
-                row.style.display = '';
-                icon.classList.add('expanded');
+        if (editId === null) {
+            const newId = Date.now() + '-' + Math.random().toString(36).substring(2);
+            inventory.push({ id: newId, articleNumber: article, color, size, quantity });
+            showMessage("✅ 添加成功");
+        } else {
+            const idx = inventory.findIndex(i => i.id === editId);
+            if (idx !== -1) {
+                inventory[idx] = { ...inventory[idx], articleNumber: article, color, size, quantity };
+                showMessage("✏️ 更新成功");
             } else {
-                row.style.display = 'none';
-                icon.classList.remove('expanded');
+                showMessage("编辑的记录不存在", true);
+                resetForm();
+                renderTableAndStats();
+                return;
             }
         }
+        saveToLocal();
+        resetForm();
+        updateStyleFilterOptions();
+        renderTableAndStats();
+    }
 
-        function getColorCode(color) {
-            const map = { '黑色': '#2c3e50', '白色': '#95a5a6', '红色': '#e74c3c', '蓝色': '#3498db', '绿色': '#27ae60' };
-            return map[color] || '#7f8c8d';
+    function deleteItem(id) {
+        const item = inventory.find(i => i.id === id);
+        if (item && confirm(`确定删除「${item.articleNumber} / ${item.color} / ${item.size}」吗？`)) {
+            inventory = inventory.filter(i => i.id !== id);
+            saveToLocal();
+            if (editId === id) resetForm();
+            updateStyleFilterOptions();
+            renderTableAndStats();
+            showMessage("🗑️ 已删除");
         }
+    }
 
-        function getQtyClass(q) {
-            return q >= 50 ? 'quantity-high' : q >= 10 ? 'quantity-medium' : 'quantity-low';
+    function adjustQuantity(id, delta) {
+        const item = inventory.find(i => i.id === id);
+        if (item) {
+            item.quantity = Math.max(0, item.quantity + delta);
+            saveToLocal();
+            renderTableAndStats();
+            showMessage(`📊 ${item.articleNumber} ${item.color} ${item.size} 数量 → ${item.quantity}`);
         }
+    }
 
-        function updateStats() {
-            document.getElementById('totalProducts').textContent = new Set(products.map(p => p.id)).size;
-            document.getElementById('totalQuantity').textContent = products.reduce((sum, p) => sum + p.quantity, 0);
-            document.getElementById('totalColors').textContent = new Set(products.map(p => p.color)).size;
-            document.getElementById('lowStock').textContent = products.filter(p => p.quantity < 10).length;
-            
-            // 更新筛选器
-            const colors = [...new Set(products.map(p => p.color))];
-            const sizes = [...new Set(products.map(p => p.size))];
-            
-            const colorSelect = document.getElementById('filterColor');
-            colorSelect.innerHTML = '<option value="">全部颜色</option>' + 
-                colors.map(c => `<option value="${c}">${c}</option>`).join('');
-            
-            const sizeSelect = document.getElementById('filterSize');
-            sizeSelect.innerHTML = '<option value="">全部尺码</option>' + 
-                sizes.map(s => `<option value="${s}">${s}</option>`).join('');
+    function fillFormForEdit(item) {
+        articleNoInput.value = item.articleNumber;
+        colorInput.value = item.color;
+        sizeInput.value = item.size;
+        quantityInput.value = item.quantity;
+        editId = item.id;
+        formModeText.innerText = "✏️ 编辑鞋子";
+        document.getElementById("formCard").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function resetForm() {
+        articleNoInput.value = "";
+        colorInput.value = "";
+        sizeInput.value = "";
+        quantityInput.value = "0";
+        editId = null;
+        formModeText.innerText = "添加新鞋子";
+    }
+
+    function applyFilters() {
+        styleFilter = styleFilterSelect.value;
+        keywordFilter = searchInput.value;
+        renderTableAndStats();
+    }
+
+    function clearFilters() {
+        styleFilterSelect.value = "";
+        searchInput.value = "";
+        styleFilter = "";
+        keywordFilter = "";
+        renderTableAndStats();
+    }
+
+    function handleTableActions(e) {
+        const btn = e.target;
+        const action = btn.getAttribute("data-action");
+        const id = btn.getAttribute("data-id");
+        if (!action || !id) return;
+        if (action === "edit") {
+            const item = inventory.find(i => i.id === id);
+            if (item) fillFormForEdit(item);
+        } else if (action === "delete") {
+            deleteItem(id);
+        } else if (action === "incr") {
+            adjustQuantity(id, 1);
+        } else if (action === "decr") {
+            adjustQuantity(id, -1);
         }
+    }
 
-        function exportData() {
-            const blob = new Blob([JSON.stringify(products, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `库存_${new Date().toISOString().slice(0,10)}.json`;
-            a.click();
-            showToast('导出成功', 'success');
-        }
+    function escapeHtml(str) {
+        if (!str) return "";
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
 
-        function importData() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = e => {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = event => {
-                    try {
-                        const data = JSON.parse(event.target.result);
-                        if (Array.isArray(data)) {
-                            products = data;
-                            localStorage.setItem('shoeInventory', JSON.stringify(products));
-                            renderTable();
-                            updateStats();
-                            syncToCloud();
-                            showToast('导入成功', 'success');
-                        }
-                    } catch {
-                        showToast('文件格式错误', 'error');
-                    }
-                };
-                reader.readAsText(file);
-            };
-            input.click();
-        }
+    // 模态框控制
+    function openModal() { modal.style.display = "flex"; }
+    function closeModal() { modal.style.display = "none"; }
+    window.onclick = function(e) { if (e.target === modal) closeModal(); };
 
-        function forceSync() {
-            if (!config.token) return showToast('请先配置 Token', 'warning');
-            syncToCloud();
-        }
+    // 绑定事件
+    function bindEvents() {
+        saveBtn.addEventListener("click", saveInventoryItem);
+        cancelBtn.addEventListener("click", resetForm);
+        addNewBtn.addEventListener("click", resetForm);
+        clearFilterBtn.addEventListener("click", clearFilters);
+        styleFilterSelect.addEventListener("change", applyFilters);
+        searchInput.addEventListener("input", applyFilters);
+        tableBody.addEventListener("click", handleTableActions);
+        openSettingsBtn.addEventListener("click", openModal);
+        closeModalBtn.addEventListener("click", closeModal);
+        backupBtn.addEventListener("click", backupToGist);
+        restoreBtn.addEventListener("click", restoreFromGist);
+        githubTokenInput.addEventListener("change", saveGistConfig);
+        gistIdInput.addEventListener("change", saveGistConfig);
+    }
 
-        function showToast(msg, type = 'success') {
-            const container = document.querySelector('.toast-container') || (() => {
-                const div = document.createElement('div');
-                div.className = 'toast-container';
-                document.body.appendChild(div);
-                return div;
-            })();
-            
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = msg;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
+    // 初始化
+    function init() {
+        loadData();
+        loadGistConfig();
+        bindEvents();
+    }
 
-        // 初始化
-        window.onload = () => {
-            renderTable();
-            updateStats();
-            if (config.token && config.gistId) {
-                loadFromCloud();
-            } else if (config.token) {
-                syncToCloud();
-            }
-        };
-    </script>
+    init();
+</script>
 </body>
 </html>
