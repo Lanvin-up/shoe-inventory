@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋子库存管理系统（免费云同步版）</title>
+    <title>鞋子库存管理系统（Gitee 稳定版）</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -161,6 +161,7 @@
         .modal .form-group { margin-bottom: 15px; }
         .modal .form-group input, .modal .form-group select { width: 100%; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .modal-actions-left { display: flex; justify-content: flex-start; gap: 10px; margin-top: 20px; flex: 1; }
         
         .help-text { font-size: 0.8em; color: #999; margin-top: 4px; }
         .help-text a { color: #3498db; text-decoration: none; }
@@ -185,7 +186,7 @@
     <div class="container">
         <div class="header">
             <h1>👟 鞋子库存管理系统</h1>
-            <p>货号自动归类 · 规格明细管理 · 免费云同步</p>
+            <p>货号自动归类 · 规格明细管理 · Gitee 免费云同步</p>
             <div class="sync-badge">
                 <span class="sync-dot" id="syncDot"></span>
                 <span id="syncText">仅本地模式</span>
@@ -263,16 +264,19 @@
     <!-- 设置模态框 -->
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
-            <h3>⚙️ 免费云同步配置</h3>
-            <p>使用 GitHub Gist 实现永久免费同步。<br>
-               <small>👉 <a href="https://github.com/settings/tokens/new?scopes=gist&description=ShoeInventory" target="_blank">点此一键生成 Token</a>（权限仅勾选 gist）</small>
+            <h3>⚙️ 免费云同步配置 (Gitee)</h3>
+            <p>使用 Gitee Gist 实现国内高速同步。<br>
+               <small>👉 <a href="https://gitee.com/profile/personal_access_tokens" target="_blank">点此去 Gitee 生成 Token</a> (权限勾选 gists)</small>
             </p>
             <div class="form-group">
-                <label>GitHub Personal Token</label>
-                <input type="password" id="settingToken" placeholder="ghp_xxxxxxxxxxxx">
+                <label>Gitee Personal Token</label>
+                <input type="password" id="settingToken" placeholder="你的 Gitee Token">
                 <div class="help-text">仅用于读写你的私人代码片段，安全可控</div>
             </div>
             <div class="modal-actions">
+                <div class="modal-actions-left">
+                    <button class="btn btn-danger btn-sm" onclick="resetCloudConfig()">🗑️ 清除配置</button>
+                </div>
                 <button class="btn btn-secondary" onclick="closeSettingsModal()">取消</button>
                 <button class="btn btn-success" onclick="saveAndInitGist()">💾 保存并自动创建</button>
             </div>
@@ -325,30 +329,27 @@
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
 
     <script>
-        // ================= GitHub Gist 配置管理 =================
+        // ================= Gitee Gist 配置管理 =================
         const GIST_FILE = 'shoe_inventory.json';
         let gistConfig = JSON.parse(localStorage.getItem('gistConfig')) || {};
         let GIST_ENABLED = !!gistConfig.token && !!gistConfig.id;
-        let GIST_API = GIST_ENABLED ? `https://api.github.com/gists/${gistConfig.id}` : '';
+        let GIST_API = GIST_ENABLED ? `https://gitee.com/api/v5/gists/${gistConfig.id}` : '';
         let products = [];
         let isSyncing = false;
 
         // 自动创建 Gist
         async function createGist(token) {
-            const res = await fetch('https://api.github.com/gists', {
+            // Gitee API 使用 access_token 参数
+            const res = await fetch(`https://gitee.com/api/v5/gists?access_token=${token}`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/vnd.github.v3+json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     description: '鞋子库存数据 (自动创建)',
                     public: false,
                     files: { [GIST_FILE]: { content: JSON.stringify({ products: [], lastSync: new Date().toISOString() }) } }
                 })
             });
-            if (!res.ok) throw new Error('创建失败');
+            if (!res.ok) throw new Error('创建失败，请检查 Token 权限 (需勾选 gists)');
             const data = await res.json();
             return data.id;
         }
@@ -357,14 +358,12 @@
         async function loadFromGist() {
             if (!GIST_ENABLED) return false;
             try {
-                const res = await fetch(GIST_API, {
-                    headers: { 'Authorization': `token ${gistConfig.token}` }
-                });
+                const res = await fetch(`${GIST_API}?access_token=${gistConfig.token}`);
                 if (!res.ok) throw new Error(res.status);
                 const data = await res.json();
                 const content = JSON.parse(data.files[GIST_FILE].content);
                 products = content.products || [];
-                updateSyncUI('已同步云端(Gist)', 'success');
+                updateSyncUI('已同步云端(Gitee)', 'success');
                 return true;
             } catch (e) {
                 console.warn('Gist加载失败:', e);
@@ -381,16 +380,13 @@
             updateSyncUI('同步中...', 'waiting');
             try {
                 const payload = JSON.stringify({ products, lastSync: new Date().toISOString() });
-                const res = await fetch(GIST_API, {
+                const res = await fetch(`${GIST_API}?access_token=${gistConfig.token}`, {
                     method: 'PATCH',
-                    headers: {
-                        'Authorization': `token ${gistConfig.token}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ files: { [GIST_FILE]: { content: payload } } })
                 });
                 if (!res.ok) throw new Error(res.status);
-                updateSyncUI('已同步云端(Gist)', 'success');
+                updateSyncUI('已同步云端(Gitee)', 'success');
             } catch (e) {
                 console.warn('Gist保存失败:', e);
                 updateSyncUI('同步失败', 'error');
@@ -418,6 +414,20 @@
         }
         function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('active'); }
         
+        // 清除配置功能
+        function resetCloudConfig() {
+            if(confirm('确定要清除云端配置吗？清除后将恢复为仅本地模式。')) {
+                localStorage.removeItem('gistConfig');
+                gistConfig = {};
+                GIST_ENABLED = false;
+                GIST_API = '';
+                closeSettingsModal();
+                updateSyncUI('仅本地模式', 'error');
+                showToast('配置已清除', 'success');
+                renderTable();
+            }
+        }
+
         async function saveAndInitGist() {
             const token = document.getElementById('settingToken').value.trim();
             if (!token) return showToast('请输入 Token', 'error');
@@ -428,7 +438,7 @@
                 gistConfig = { token, id: gistId };
                 localStorage.setItem('gistConfig', JSON.stringify(gistConfig));
                 GIST_ENABLED = true;
-                GIST_API = `https://api.github.com/gists/${gistId}`;
+                GIST_API = `https://gitee.com/api/v5/gists/${gistId}`;
                 closeSettingsModal();
                 showToast('配置成功！正在同步...', 'success');
                 await loadFromGist();
