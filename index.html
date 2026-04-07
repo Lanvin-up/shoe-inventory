@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鞋子库存管理系统（免费云同步版）</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #e0e5ec 0%, #c9d1da 100%);
+            min-height: 100vh; padding: 20px; color: #333;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .header {
+            text-align: center; margin-bottom: 20px; padding: 25px;
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            border-radius: 16px; color: white; position: relative;
+            box-shadow: 0 8px 32px rgba(44, 62, 80, 0.3);
+        }
+        .header h1 { font-size: 2em; margin-bottom: 5px; letter-spacing: 2px; }
+        .header p { opacity: 0.85; font-size: 0.95em; }
+        
+        .settings-btn {
+            position: absolute; top: 15px; right: 20px;
+            background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+            color: white; padding: 8px 15px; border-radius: 20px;
+            font-size: 0.9em; cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .settings-btn:hover { background: rgba(255,255,255,0.35); }
+        
+        .sync-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 12px;
+            font-size: 0.75em; margin-top: 10px;
+        }
+        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #27ae60; }
+        .sync-dot.error { background: #e74c3c; }
+        .sync-dot.waiting { background: #f1c40f; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+        .stats-bar { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .stat-card {
+            flex: 1; min-width: 150px; background: white; padding: 20px;
+            border-radius: 12px; text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card .number {
+            font-size: 2em; font-weight: 700;
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .stat-card .label { font-size: 0.85em; color: #888; margin-top: 5px; }
+
+        .form-panel {
+            background: white; border-radius: 16px; padding: 25px;
+            margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        .form-panel h2 { font-size: 1.3em; margin-bottom: 20px; color: #2c3e50; display: flex; align-items: center; gap: 8px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.85em; font-weight: 600; color: #555; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select {
+            padding: 10px 14px; border: 2px solid #e0e5ec; border-radius: 10px;
+            font-size: 0.95em; transition: all 0.3s; outline: none; background: #f8f9fa;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: #3498db; background: white; box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.15);
+        }
+        .form-actions { display: flex; gap: 10px; margin-top: 15px; }
+
+        .btn {
+            padding: 10px 24px; border: none; border-radius: 10px; font-size: 0.95em;
+            font-weight: 600; cursor: pointer; transition: all 0.3s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3); }
+        .btn-primary:hover { box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4); transform: translateY(-1px); }
+        .btn-success { background: linear-gradient(135deg, #27ae60, #219a52); color: white; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); }
+        .btn-success:hover { box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4); transform: translateY(-1px); }
+        .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
+        .btn-secondary { background: #95a5a6; color: white; }
+        .btn-sm { padding: 6px 14px; font-size: 0.82em; border-radius: 8px; }
+
+        .toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+        .search-box { flex: 1; min-width: 250px; position: relative; }
+        .search-box input {
+            width: 100%; padding: 10px 14px 10px 40px; border: 2px solid #e0e5ec;
+            border-radius: 10px; font-size: 0.95em; outline: none; background: white; transition: all 0.3s;
+        }
+        .search-box input:focus { border-color: #3498db; box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.15); }
+        .search-box::before { content: "🔍"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1em; }
+        .filter-select {
+            padding: 10px 14px; border: 2px solid #e0e5ec; border-radius: 10px;
+            font-size: 0.95em; outline: none; background: white; cursor: pointer; min-width: 120px;
+        }
+
+        .table-container { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
+        .table-container table { width: 100%; border-collapse: collapse; }
+        .table-container thead { background: linear-gradient(135deg, #2c3e50, #34495e); color: white; }
+        .table-container th { padding: 14px 16px; text-align: left; font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }
+        .table-container td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: 0.92em; }
+
+        .main-row { cursor: pointer; background: #fff; transition: background 0.2s; }
+        .main-row:hover { background: #f8f9fa; }
+        .detail-row { background: #fafbfc; }
+        .sub-table { width: 100%; border-collapse: collapse; margin: 0; }
+        .sub-table th, .sub-table td { padding: 10px 16px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9em; }
+        .sub-table thead { background: #f1f3f5; color: #555; }
+        .sub-table th { font-weight: 600; font-size: 0.8em; text-transform: uppercase; }
+        .toggle-icon { 
+            cursor: pointer; font-size: 1.2em; user-select: none; transition: transform 0.2s; 
+            display: inline-block; width: 20px; text-align: center; color: #3498db; 
+        }
+        .toggle-icon.expanded { transform: rotate(90deg); }
+        .variant-summary { font-size: 0.85em; color: #666; }
+
+        .product-id { font-weight: 700; color: #2c3e50; font-family: 'Courier New', monospace; }
+        .color-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.82em; font-weight: 600; text-align: center; min-width: 60px; }
+        .quantity-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.9em; }
+        .quantity-high { background: #d4edda; color: #155724; }
+        .quantity-medium { background: #fff3cd; color: #856404; }
+        .quantity-low { background: #f8d7da; color: #721c24; }
+
+        .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #aaa; }
+        .empty-state .icon { font-size: 3em; margin-bottom: 15px; }
+        .empty-state p { font-size: 1.1em; }
+
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            padding: 12px 20px; border-radius: 10px; color: white; font-weight: 600;
+            font-size: 0.9em; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.5s forwards;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .toast-success { background: linear-gradient(135deg, #27ae60, #219a52); }
+        .toast-error { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .toast-warning { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
+
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); z-index: 999; justify-content: center;
+            align-items: center; backdrop-filter: blur(3px);
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white; border-radius: 16px; padding: 30px; max-width: 500px;
+            width: 90%; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal h3 { margin-bottom: 20px; color: #2c3e50; }
+        .modal p { color: #666; font-size: 0.9em; margin-bottom: 15px; line-height: 1.5; }
+        .modal .form-group { margin-bottom: 15px; }
+        .modal .form-group input, .modal .form-group select { width: 100%; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        
+        .help-text { font-size: 0.8em; color: #999; margin-top: 4px; }
+        .help-text a { color: #3498db; text-decoration: none; }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.5em; }
+            .form-grid { grid-template-columns: 1fr 1fr; }
+            .table-container { overflow-x: auto; }
+            .table-container table { min-width: 700px; }
+        }
+        @media (max-width: 480px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .stats-bar { flex-direction: column; }
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f0f0f0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #bbb; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #999; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👟 鞋子库存管理系统</h1>
+            <p>货号自动归类 · 规格明细管理 · 免费云同步</p>
+            <div class="sync-badge">
+                <span class="sync-dot" id="syncDot"></span>
+                <span id="syncText">仅本地模式</span>
+            </div>
+            <button class="settings-btn" onclick="openSettingsModal()">⚙️ 设置</button>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-card"><div class="number" id="totalProducts">0</div><div class="label">商品款式</div></div>
+            <div class="stat-card"><div class="number" id="totalQuantity">0</div><div class="label">库存总量</div></div>
+            <div class="stat-card"><div class="number" id="totalColors">0</div><div class="label">颜色种类</div></div>
+            <div class="stat-card"><div class="number" id="lowStock">0</div><div class="label">库存预警</div></div>
+        </div>
+
+        <div class="form-panel">
+            <h2>📦 添加新商品/规格</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>货号</label>
+                    <input type="text" id="productId" placeholder="如: SN-2024-001">
+                </div>
+                <div class="form-group">
+                    <label>颜色</label>
+                    <input type="text" list="colorOptions" id="productColor" placeholder="选择或输入自定义颜色" autocomplete="off">
+                    <datalist id="colorOptions">
+                        <option value="黑色"><option value="白色"><option value="红色"><option value="蓝色">
+                        <option value="绿色"><option value="灰色"><option value="粉色"><option value="棕色">
+                        <option value="黄色"><option value="紫色"><option value="米色"><option value="橙色">
+                        <option value="雾霾蓝"><option value="燕麦色"><option value="酒红色"><option value="藏青色">
+                    </datalist>
+                </div>
+                <div class="form-group">
+                    <label>尺码</label>
+                    <select id="productSize">
+                        <option value="">请选择尺码</option>
+                        <option value="35">35</option><option value="36">36</option><option value="37">37</option>
+                        <option value="38">38</option><option value="39">39</option><option value="40">40</option>
+                        <option value="41">41</option><option value="42">42</option><option value="43">43</option>
+                        <option value="44">44</option><option value="45">45</option><option value="46">46</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>数量</label>
+                    <input type="number" id="productQuantity" placeholder="0" min="0">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-success" onclick="addProduct()">➕ 添加</button>
+                <button class="btn btn-secondary" onclick="resetForm()">🔄 重置</button>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <div class="search-box"><input type="text" id="searchInput" placeholder="搜索货号..." oninput="renderTable()"></div>
+            <select class="filter-select" id="filterColor" onchange="renderTable()"><option value="">全部颜色</option></select>
+            <select class="filter-select" id="filterSize" onchange="renderTable()"><option value="">全部尺码</option></select>
+            <button class="btn btn-primary" onclick="exportData()">📥 导出</button>
+            <button class="btn btn-warning" onclick="importData()">📤 导入</button>
+            <button class="btn btn-secondary" onclick="forceSync()">🔄 手动同步</button>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:40px"></th>
+                        <th>货号</th><th>规格统计</th><th>总库存</th><th style="width:180px">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 设置模态框 -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h3>⚙️ 免费云同步配置</h3>
+            <p>使用 GitHub Gist 实现永久免费同步。<br>
+               <small>👉 <a href="https://github.com/settings/tokens/new?scopes=gist&description=ShoeInventory" target="_blank">点此一键生成 Token</a>（权限仅勾选 gist）</small>
+            </p>
+            <div class="form-group">
+                <label>GitHub Personal Token</label>
+                <input type="password" id="settingToken" placeholder="ghp_xxxxxxxxxxxx">
+                <div class="help-text">仅用于读写你的私人代码片段，安全可控</div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeSettingsModal()">取消</button>
+                <button class="btn btn-success" onclick="saveAndInitGist()">💾 保存并自动创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑模态框 -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h3>✏️ 编辑规格明细</h3>
+            <input type="hidden" id="editIndex">
+            <div class="form-group"><label>货号</label><input type="text" id="editProductId" readonly style="background:#eee;cursor:not-allowed"></div>
+            <div class="form-group">
+                <label>颜色</label>
+                <input type="text" list="editColorOptions" id="editProductColor" autocomplete="off">
+                <datalist id="editColorOptions">
+                    <option value="黑色"><option value="白色"><option value="红色"><option value="蓝色">
+                    <option value="绿色"><option value="灰色"><option value="粉色"><option value="棕色">
+                    <option value="黄色"><option value="紫色"><option value="米色"><option value="橙色">
+                </datalist>
+            </div>
+            <div class="form-group"><label>尺码</label><select id="editProductSize">
+                <option value="35">35</option><option value="36">36</option><option value="37">37</option>
+                <option value="38">38</option><option value="39">39</option><option value="40">40</option>
+                <option value="41">41</option><option value="42">42</option><option value="43">43</option>
+                <option value="44">44</option><option value="45">45</option><option value="46">46</option>
+            </select></div>
+            <div class="form-group"><label>数量</label><input type="number" id="editProductQuantity" min="0"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-success" onclick="saveEdit()">💾 保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <h3>⚠️ 确认删除</h3>
+            <p style="margin: 15px 0; color: #666;">确定要删除该规格记录吗？此操作不可撤销。</p>
+            <input type="hidden" id="deleteIndex">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">🗑️ 删除</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+
+    <script>
+        // ================= GitHub Gist 配置管理 =================
+        const GIST_FILE = 'shoe_inventory.json';
+        let gistConfig = JSON.parse(localStorage.getItem('gistConfig')) || {};
+        let GIST_ENABLED = !!gistConfig.token && !!gistConfig.id;
+        let GIST_API = GIST_ENABLED ? `https://api.github.com/gists/${gistConfig.id}` : '';
+        let products = [];
+        let isSyncing = false;
+
+        // 自动创建 Gist
+        async function createGist(token) {
+            const res = await fetch('https://api.github.com/gists', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({
+                    description: '鞋子库存数据 (自动创建)',
+                    public: false,
+                    files: { [GIST_FILE]: { content: JSON.stringify({ products: [], lastSync: new Date().toISOString() }) } }
+                })
+            });
+            if (!res.ok) throw new Error('创建失败');
+            const data = await res.json();
+            return data.id;
+        }
+
+        // 加载数据
+        async function loadFromGist() {
+            if (!GIST_ENABLED) return false;
+            try {
+                const res = await fetch(GIST_API, {
+                    headers: { 'Authorization': `token ${gistConfig.token}` }
+                });
+                if (!res.ok) throw new Error(res.status);
+                const data = await res.json();
+                const content = JSON.parse(data.files[GIST_FILE].content);
+                products = content.products || [];
+                updateSyncUI('已同步云端(Gist)', 'success');
+                return true;
+            } catch (e) {
+                console.warn('Gist加载失败:', e);
+                updateSyncUI('云端连接失败', 'error');
+                showToast('云端同步失败，已使用本地缓存', 'warning');
+                return false;
+            }
+        }
+
+        // 保存数据
+        async function saveToGist() {
+            if (!GIST_ENABLED || isSyncing) return;
+            isSyncing = true;
+            updateSyncUI('同步中...', 'waiting');
+            try {
+                const payload = JSON.stringify({ products, lastSync: new Date().toISOString() });
+                const res = await fetch(GIST_API, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${gistConfig.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ files: { [GIST_FILE]: { content: payload } } })
+                });
+                if (!res.ok) throw new Error(res.status);
+                updateSyncUI('已同步云端(Gist)', 'success');
+            } catch (e) {
+                console.warn('Gist保存失败:', e);
+                updateSyncUI('同步失败', 'error');
+                showToast('云端保存失败，数据已存本地', 'warning');
+            }
+            isSyncing = false;
+        }
+
+        function updateSyncUI(text, type) {
+            const dot = document.getElementById('syncDot');
+            const txt = document.getElementById('syncText');
+            txt.textContent = text;
+            dot.className = 'sync-dot' + (type === 'error' ? ' error' : type === 'waiting' ? ' waiting' : '');
+        }
+
+        function forceSync() {
+            if (!GIST_ENABLED) return showToast('请先配置免费云同步', 'warning');
+            saveToGist();
+        }
+
+        // 设置弹窗
+        function openSettingsModal() {
+            document.getElementById('settingToken').value = gistConfig.token || '';
+            document.getElementById('settingsModal').classList.add('active');
+        }
+        function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('active'); }
+        
+        async function saveAndInitGist() {
+            const token = document.getElementById('settingToken').value.trim();
+            if (!token) return showToast('请输入 Token', 'error');
+            
+            try {
+                showToast('正在初始化云存储...', 'warning');
+                const gistId = gistConfig.id || await createGist(token);
+                gistConfig = { token, id: gistId };
+                localStorage.setItem('gistConfig', JSON.stringify(gistConfig));
+                GIST_ENABLED = true;
+                GIST_API = `https://api.github.com/gists/${gistId}`;
+                closeSettingsModal();
+                showToast('配置成功！正在同步...', 'success');
+                await loadFromGist();
+                renderTable(); updateStats(); updateFilters();
+                saveToGist();
+            } catch (e) {
+                showToast('配置失败：' + e.message, 'error');
+            }
+        }
+
+        // 本地读取
+        function loadProducts() {
+            const data = localStorage.getItem('shoeInventory');
+            if (data) products = JSON.parse(data);
+        }
+        function saveProducts() {
+            localStorage.setItem('shoeInventory', JSON.stringify(products));
+            updateStats(); updateFilters();
+            if (GIST_ENABLED) {
+                clearTimeout(window.syncTimer);
+                window.syncTimer = setTimeout(saveToGist, 800);
+            }
+        }
+
+        function showToast(msg, type = 'success') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.innerHTML = `${{success:'✅',error:'❌',warning:'⚠️'}[type]||'✅'} ${msg}`;
+            c.appendChild(t); setTimeout(() => t.remove(), 3000);
+        }
+
+        function getColorBadgeStyle(color) {
+            const map = {'黑色':'#2c3e50','白色':'#e0e0e0','红色':'#e74c3c','蓝色':'#3498db','绿色':'#27ae60','灰色':'#7f8c8d','粉色':'#e91e9c','棕色':'#8B4513','黄色':'#f39c12','紫色':'#9b59b6','米色':'#d4b896','橙色':'#e67e22','雾霾蓝':'#6495ed','燕麦色':'#c5b398','酒红色':'#800020','藏青色':'#000080'};
+            const bg = map[color] || `hsl(${color.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%360},45%,45%)`;
+            return `background:${bg};color:${['白色','黄色','米色','灰色','燕麦色'].includes(color)?'#333':'#fff'};`;
+        }
+        function getQtyClass(q) { return q>=50?'quantity-high':q>=10?'quantity-medium':'quantity-low'; }
+        function escapeHtml(t) { const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+
+        async function addProduct() {
+            const id = document.getElementById('productId').value.trim();
+            const color = document.getElementById('productColor').value.trim();
+            const size = document.getElementById('productSize').value;
+            const qty = parseInt(document.getElementById('productQuantity').value);
+
+            if(!id) return showToast('请输入货号！','error');
+            if(!color) return showToast('请输入或选择颜色！','error');
+            if(!size) return showToast('请选择尺码！','error');
+            if(isNaN(qty)||qty<0) return showToast('请输入有效数量！','error');
+
+            const dup = products.find(p=>p.id===id && p.color===color && p.size===size);
+            if(dup) {
+                dup.quantity += qty; dup.updatedAt = new Date().toLocaleString('zh-CN');
+                showToast(`${id}（${color}/${size}）库存已追加 +${qty}`, 'warning');
+            } else {
+                products.push({id, color, size, quantity: qty, updatedAt: new Date().toLocaleString('zh-CN')});
+                showToast(`${id} 新增规格成功！`, 'success');
+            }
+            saveProducts(); renderTable(); resetForm();
+        }
+        function resetForm() {
+            ['productId','productColor','productSize','productQuantity'].forEach(id=>document.getElementById(id).value='');
+        }
+
+        function renderTable() {
+            const search = document.getElementById('searchInput').value.trim().toLowerCase();
+            const fColor = document.getElementById('filterColor').value;
+            const fSize = document.getElementById('filterSize').value;
+            const tbody = document.getElementById('tableBody');
+
+            let filtered = products.map((p,i)=>({...p,origIdx:i})).filter(p=>
+                p.id.toLowerCase().includes(search) && (!fColor||p.color===fColor) && (!fSize||p.size===fSize)
+            );
+
+            if(filtered.length===0) {
+                tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">📭</div><p>${products.length===0?'暂无库存数据':'未找到匹配记录'}</p></div></td></tr>`;
+                return;
+            }
+
+            const groups = new Map();
+            filtered.forEach(p=>{
+                if(!groups.has(p.id)) groups.set(p.id, {id:p.id, variants:[], total:0});
+                groups.get(p.id).variants.push(p);
+                groups.get(p.id).total += p.quantity;
+            });
+
+            let html = '';
+            groups.forEach(g=>{
+                const colors = [...new Set(g.variants.map(v=>v.color))];
+                const sizes = [...new Set(g.variants.map(v=>v.size))];
+                const sum = `${colors.length}色 / ${sizes.length}码`;
+
+                let rows = g.variants.map(v=>`
+                    <tr>
+                        <td><span class="color-badge" style="${getColorBadgeStyle(v.color)}">${v.color}</span></td>
+                        <td>${v.size}</td>
+                        <td><span class="quantity-badge ${getQtyClass(v.quantity)}">📦 ${v.quantity}</span></td>
+                        <td style="color:#888;font-size:0.82em">${v.updatedAt}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openEditModal(${v.origIdx})">✏️</button>
+                            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();openDeleteModal(${v.origIdx})">🗑️</button>
+                        </td>
+                    </tr>`).join('');
+
+                html += `
+                    <tr class="main-row" onclick="toggleGroup('${escapeHtml(g.id)}')">
+                        <td><span class="toggle-icon" id="icon-${escapeHtml(g.id)}">▶</span></td>
+                        <td><strong class="product-id">${escapeHtml(g.id)}</strong></td>
+                        <td class="variant-summary">${sum}</td>
+                        <td><strong>${g.total}</strong></td>
+                        <td onclick="event.stopPropagation()">
+                            <button class="btn btn-primary btn-sm" onclick="editGroupId('${escapeHtml(g.id)}')">📝 改货号</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteGroup('${escapeHtml(g.id)}')">🗑️ 删全部</button>
+                        </td>
+                    </tr>
+                    <tr class="detail-row" id="detail-${escapeHtml(g.id)}" style="display:none;">
+                        <td colspan="5">
+                            <table class="sub-table">
+                                <thead><tr><th>颜色</th><th>尺码</th><th>数量</th><th>更新时间</th><th>操作</th></tr></thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </td>
+                    </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function toggleGroup(id) {
+            const row = document.getElementById(`detail-${id}`);
+            const icon = document.getElementById(`icon-${id}`);
+            if(!row) return;
+            const isHidden = row.style.display==='none';
+            row.style.display = isHidden ? '' : 'none';
+            icon.classList.toggle('expanded', isHidden);
+        }
+
+        function openEditModal(idx) {
+            const p = products[idx];
+            document.getElementById('editIndex').value = idx;
+            document.getElementById('editProductId').value = p.id;
+            document.getElementById('editProductColor').value = p.color;
+            document.getElementById('editProductSize').value = p.size;
+            document.getElementById('editProductQuantity').value = p.quantity;
+            document.getElementById('editModal').classList.add('active');
+        }
+        function closeModal() { document.getElementById('editModal').classList.remove('active'); }
+        function saveEdit() {
+            const idx = parseInt(document.getElementById('editIndex').value);
+            const color = document.getElementById('editProductColor').value.trim();
+            const size = document.getElementById('editProductSize').value;
+            const qty = parseInt(document.getElementById('editProductQuantity').value);
+            if(!color || isNaN(qty) || qty<0) return showToast('请完整填写字段','error');
+
+            const dup = products.findIndex((p,i)=>i!==idx && p.id===products[idx].id && p.color===color && p.size===size);
+            if(dup!==-1) return showToast('该货号下已存在相同规格','error');
+
+            products[idx] = {...products[idx], color, size, quantity:qty, updatedAt:new Date().toLocaleString('zh-CN')};
+            saveProducts(); renderTable(); closeModal(); showToast('规格更新成功','success');
+        }
+
+        function openDeleteModal(idx) {
+            document.getElementById('deleteIndex').value = idx;
+            document.getElementById('deleteModal').classList.add('active');
+        }
+        function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('active'); }
+        function confirmDelete() {
+            const idx = parseInt(document.getElementById('deleteIndex').value);
+            products.splice(idx, 1); saveProducts(); renderTable(); closeDeleteModal(); showToast('已删除','success');
+        }
+
+        function editGroupId(oldId) {
+            const newId = prompt('请输入新货号：', oldId);
+            if(newId && newId.trim()!==oldId) {
+                if(products.some(p=>p.id===newId.trim())) return showToast('货号已存在','error');
+                products.forEach(p=>{if(p.id===oldId)p.id=newId.trim()});
+                saveProducts(); renderTable(); showToast('货号已修改','success');
+            }
+        }
+        function deleteGroup(id) {
+            if(!confirm(`确定删除 ${id} 下的所有规格吗？`)) return;
+            products = products.filter(p=>p.id!==id);
+            saveProducts(); renderTable(); showToast(`已删除 ${id} 全部规格`,'success');
+        }
+
+        function updateStats() {
+            document.getElementById('totalProducts').textContent = new Set(products.map(p=>p.id)).size;
+            document.getElementById('totalQuantity').textContent = products.reduce((s,p)=>s+p.quantity,0);
+            document.getElementById('totalColors').textContent = new Set(products.map(p=>p.color)).size;
+            document.getElementById('lowStock').textContent = products.filter(p=>p.quantity<10).length;
+        }
+        function updateFilters() {
+            const fC = document.getElementById('filterColor'), fS = document.getElementById('filterSize');
+            const cv = fC.value, sv = fS.value;
+            fC.innerHTML = '<option value="">全部颜色</option>'+[...new Set(products.map(p=>p.color))].sort().map(c=>`<option value="${c}">${c}</option>`).join('');
+            fS.innerHTML = '<option value="">全部尺码</option>'+[...new Set(products.map(p=>p.size))].sort().map(s=>`<option value="${s}">${s}</option>`).join('');
+            fC.value = cv; fS.value = sv;
+        }
+
+        function exportData() {
+            if(!products.length) return showToast('无数据可导出','warning');
+            const blob = new Blob([JSON.stringify(products,null,2)],{type:'application/json'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = `鞋子库存_${new Date().toISOString().slice(0,10)}.json`; a.click();
+            URL.revokeObjectURL(a.href); showToast('导出成功','success');
+        }
+        function importData() { document.getElementById('importFile').click(); }
+        function handleImport(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if(!Array.isArray(data)) throw new Error();
+                    let added = 0;
+                    data.forEach(it => {
+                        if(!it.id||!it.color||!it.size||it.quantity===undefined) return;
+                        if(!products.find(p=>p.id===it.id&&p.color===it.color&&p.size===it.size)) {
+                            products.push({id:it.id,color:it.color,size:it.size,quantity:it.quantity,updatedAt:it.updatedAt||new Date().toLocaleString('zh-CN')});
+                            added++;
+                        }
+                    });
+                    saveProducts(); renderTable(); showToast(`导入成功，新增 ${added} 条`,'success');
+                } catch { showToast('文件格式错误','error'); }
+            };
+            reader.readAsText(file); e.target.value='';
+        }
+
+        // 初始化
+        async function init() {
+            loadProducts();
+            const gistLoaded = await loadFromGist();
+            if(!gistLoaded) {
+                if(GIST_ENABLED) updateSyncUI('Gist加载失败', 'error');
+                else updateSyncUI('仅本地模式', 'warning');
+            }
+            renderTable(); updateStats(); updateFilters();
+        }
+        init();
+    </script>
+</body>
+</html>
